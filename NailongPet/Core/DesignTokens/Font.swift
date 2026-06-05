@@ -12,4 +12,5 @@ extension Font {
     static let title2: Font = title2.bold()
     static let subhead: Font = .subheadline.bold()
     static let footNote: Font = .footnote
+    static let body: Font = .body
 }

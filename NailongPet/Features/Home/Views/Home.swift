@@ -9,19 +9,24 @@ import SwiftUI
 
 struct Home: View {
     var body: some View {
-        VStack (alignment: .leading) {
-            Text("Nailong Pet")
-                .font(Font.title1)
-                .multilineTextAlignment(.leading)
-                .padding(.top, 25)
+        VStack {
+            AppTitle()
             
             Spacer()
             
-            MenuSelection()
+            MenuSelection(
+                menuFeatureTitle: "Bring Pet to 3D",
+                menuFeatureSubtitle: "Preserve the moment with your pet",
+                menuFeatureIconImgName: AppIcon.MenuFeatureMLSharp
+            )
             
             Spacer()
             
-            MenuSelection()
+            MenuSelection(
+                menuFeatureTitle: "Interact",
+                menuFeatureSubtitle: "Feel the presence of your 3D companion",
+                menuFeatureIconImgName: AppIcon.MenuFeatureObjectCapture
+            )
             
             Spacer()
         }

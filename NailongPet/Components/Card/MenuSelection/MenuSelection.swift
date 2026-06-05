@@ -14,21 +14,21 @@ struct MenuSelection: View {
         VStack{
             Image(systemName: "placeholderMenuSelection")
                 .frame(maxWidth: 313, maxHeight:277)
-                .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
+                .background(RoundedRectangle(cornerRadius: CornerRadius.medium.value).fill(Color.whitePrimarySurface))
             
                 HStack {
-                    Image(systemName: AppIcon.MenuFeatureDefault)
-                        .font(Font.title1)
+                    AppIcon.bringTo3D.image
+                        .font(.title1Bold)
                         .padding(10)
                     VStack(alignment: .leading){
-                        Text("Bring Pet to 3D").font(Font.subhead)
+                        Text("Bring Pet to 3D").font(.subheadRegular)
                         Text("Preserve the moment with your pet")
                     }
                     .frame(maxWidth: .infinity)
                 }
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 22).fill(Color.BrandColorPrimary))
+        .background(RoundedRectangle(cornerRadius: CornerRadius.medium.value).fill(Color.orangePrimaryBrand))
         .frame(maxWidth: 300, maxHeight: 200)
         
     }

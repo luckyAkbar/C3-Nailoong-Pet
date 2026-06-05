@@ -2,7 +2,7 @@
 //  CornerRadius.swift
 //  NailongPet
 //
-//  Created by Fakhri Djamaris on 05/06/26.
+//  Design Token - Single Source of Truth untuk semua corner radius aplikasi
 //
 
 import Foundation

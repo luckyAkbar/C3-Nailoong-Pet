@@ -8,7 +8,7 @@
 import SwiftUI
 
 extension Font {
-    static let title1: Font = title1.bold()
+    static let title1: Font = title.bold()
     static let title2: Font = title2.bold()
     static let subhead: Font = .subheadline.bold()
     static let footNote: Font = .footnote

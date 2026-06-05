@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct MenuSelection: View {
-    var ratio: CGFloat = 0.25 // Configurable ratio for the first part (e.g. 0.25 for 1/4 width)
-
     var body: some View {
         VStack{
             Image(systemName: "placeholderMenuSelection")
@@ -24,8 +22,8 @@ struct MenuSelection: View {
                         Text("Bring Pet to 3D").font(.subheadRegular)
                         Text("Preserve the moment with your pet")
                     }
-                    .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity)
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: CornerRadius.medium.value).fill(Color.orangePrimaryBrand))

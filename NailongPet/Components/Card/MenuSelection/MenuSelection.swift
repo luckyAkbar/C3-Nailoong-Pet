@@ -11,30 +11,23 @@ struct MenuSelection: View {
     var body: some View {
         VStack{
             Image(systemName: "placeholderMenuSelection")
-                .frame(maxWidth: 299, maxHeight: 193)
-                .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
+                .frame(maxWidth: 313, maxHeight:277)
+                .background(RoundedRectangle(cornerRadius: CornerRadius.medium.value).fill(Color.whitePrimarySurface))
             
-            HStack {
-                    Image(systemName: AppIcon.MenuFeatureDefault)
-                        .font(Font.title1)
-                        .padding(.trailing, 0)
+                HStack {
+                    AppIcon.bringTo3D.image
+                        .font(.title1Bold)
+                        .padding(10)
                     VStack(alignment: .leading){
-                        Text("Bring Pet to 3D").font(Font.title1)
-                        Text("Preserve the moment with your pet").font(Font.body)
+                        Text("Bring Pet to 3D").font(.subheadRegular)
+                        Text("Preserve the moment with your pet")
                     }
                 }
                 .frame(maxWidth: .infinity)
         }
         .padding(12)
-        .background(
-            ZStack{
-                RoundedRectangle(cornerRadius: 22)
-                LinearGradient(colors: [Color.BrandColorPrimary, Color.BrandColorTertiary], startPoint: .bottom, endPoint: .top)
-            }
-        )
-        .frame(maxWidth: 313, maxHeight: 277)
-        .cornerRadius(22)
-        
+        .background(RoundedRectangle(cornerRadius: CornerRadius.medium.value).fill(Color.orangePrimaryBrand))
+        .frame(maxWidth: 300, maxHeight: 200)
         
     }
 }

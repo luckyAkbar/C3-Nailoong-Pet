@@ -2,15 +2,22 @@
 //  Font.swift
 //  NailongPet
 //
-//  Created by Lucky Akbar on 05/06/26.
+//  Design Token - Single Source of Truth untuk semua tipografi aplikasi
+//  Menggunakan SF Pro Rounded dengan ukuran eksplisit sesuai design spec
 //
 
 import SwiftUI
 
 extension Font {
-    static let title1: Font = title.bold()
-    static let title2: Font = title2.bold()
-    static let subhead: Font = .subheadline.bold()
-    static let footNote: Font = .footnote
-    static let body: Font = .body
+    /// Title 1 (SF Pro Rounded, Bold, 28) - Tulisan di homepage
+    static let title1Bold = Font.system(size: 28, weight: .bold, design: .rounded)
+    
+    /// Title 2 (SF Pro Rounded, Bold, 22) - Title tiap page
+    static let title2Bold = Font.system(size: 22, weight: .bold, design: .rounded)
+    
+    /// Subhead (SF Pro Rounded, Regular, 15) - Bodytext, guideline
+    static let subheadRegular = Font.system(size: 15, weight: .regular, design: .rounded)
+    
+    /// Footnote (SF Pro Rounded, Regular, 13) - Keterangan interaksi kecil
+    static let footnoteRegular = Font.system(size: 13, weight: .regular, design: .rounded)
 }

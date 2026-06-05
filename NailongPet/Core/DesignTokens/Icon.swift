@@ -6,5 +6,6 @@
 //
 
 enum AppIcon {
-    static let MenuFeatureDefault = "square.2.layers.3d"
+    static let MenuFeatureMLSharp = "square.2.layers.3d"
+    static let MenuFeatureObjectCapture = "hand.wave"
 }

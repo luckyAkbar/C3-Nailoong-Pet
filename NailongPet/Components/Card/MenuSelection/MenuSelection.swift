@@ -8,22 +8,30 @@
 import SwiftUI
 
 struct MenuSelection: View {
+    let menuFeatureTitle: String
+    let menuFeatureSubtitle: String
+    let menuFeatureIconImgName: String
+
     var body: some View {
         VStack{
             Image(systemName: "placeholderMenuSelection")
                 .frame(maxWidth: 299, maxHeight: 193)
                 .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
             
-            HStack {
-                    Image(systemName: AppIcon.MenuFeatureDefault)
-                        .font(Font.title1)
-                        .padding(.trailing, 0)
-                    VStack(alignment: .leading){
-                        Text("Bring Pet to 3D").font(Font.title1)
-                        Text("Preserve the moment with your pet").font(Font.body)
-                    }
+            HStack(spacing: 12) {
+                Image(systemName: menuFeatureIconImgName)
+                    .font(Font.title1)
+                VStack(alignment: .leading) {
+                    Text(menuFeatureTitle)
+                        .font(Font.title2)
+                    Text(menuFeatureSubtitle)
+                        .font(Font.body)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
+             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
         .background(
@@ -32,13 +40,15 @@ struct MenuSelection: View {
                 LinearGradient(colors: [Color.BrandColorPrimary, Color.BrandColorTertiary], startPoint: .bottom, endPoint: .top)
             }
         )
-        .frame(maxWidth: 313, maxHeight: 277)
+        .frame(width: 313, height: 277)
         .cornerRadius(22)
-        
-        
     }
 }
 
 #Preview {
-    MenuSelection()
+    MenuSelection(
+        menuFeatureTitle: "Bring Pet to 3D",
+        menuFeatureSubtitle: "Feel the presence of your 3D companion",
+        menuFeatureIconImgName: AppIcon.MenuFeatureMLSharp
+    )
 }

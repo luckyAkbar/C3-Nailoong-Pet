@@ -30,6 +30,8 @@ struct Home: View {
             
             Spacer()
         }
+        .background(Color.BrandColorTertiary)
+        
     }
 }
 

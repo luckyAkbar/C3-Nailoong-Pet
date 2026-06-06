@@ -16,7 +16,7 @@ struct MenuSelection: View {
         VStack{
             Image(systemName: "placeholderMenuSelection")
                 .frame(maxWidth: 299, maxHeight: 193)
-                .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.white))
             
             HStack(spacing: 12) {
                 Image(systemName: menuFeatureIconImgName)
@@ -37,7 +37,7 @@ struct MenuSelection: View {
         .background(
             ZStack{
                 RoundedRectangle(cornerRadius: 22)
-                LinearGradient(colors: [Color.BrandColorPrimary, Color.BrandColorTertiary], startPoint: .bottom, endPoint: .top)
+                LinearGradient(colors: [Color.BrandColorPrimary, Color.white], startPoint: .bottom, endPoint: .top)
             }
         )
         .frame(width: 313, height: 277)

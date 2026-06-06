@@ -25,7 +25,7 @@ enum AppIcon: String {
     case cameraGuideline = "camera"
     case recordingPause = "pause.circle"
     case imagePlaceholder = "photo"
-    case favoriteMoment = "square.grid.3x3.fill"
+    case favoriteMoment = "square.grid.3x3.square"
     case scanCompanion = "camera.fill"
     
     /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai

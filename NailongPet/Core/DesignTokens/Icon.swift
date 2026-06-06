@@ -19,10 +19,12 @@ enum AppIcon: String {
     case moli = "Moli"
     
     // MARK: - App Features & States
-    case bringTo3D = "square.stack"
+    case bringTo3D = "square.2.layers.3d"
+    case interact = "hands.clap"
     case pawLoading = "pawprint.fill"
     case cameraGuideline = "camera"
     case recordingPause = "pause.circle"
+    case imagePlaceholder = "photo"
     
     /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai
     var image: Image {

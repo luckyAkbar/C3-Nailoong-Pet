@@ -11,17 +11,6 @@ struct MenuSelection: View {
     let icon: AppIcon
     let title: String
     let subtitle: String
-    
-    //variable for changing the photo mid application
-    @Binding var selectedImage: Image?
-    
-    //add constructor for nil state of the image
-    init(icon: AppIcon, title: String, subtitle: String, selectedImage: Binding<Image?> = .constant(nil)) {
-        self.icon = icon
-        self.title = title
-        self.subtitle = subtitle
-        self._selectedImage = selectedImage
-    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -29,20 +18,11 @@ struct MenuSelection: View {
                 RoundedRectangle(cornerRadius: CornerRadius.medium.value)
                     .stroke(Color.graySecondaryText.opacity(0.35), lineWidth: 1)
 
-                // check if any image is selected or choose placeholder
-                if let selectedImage {
-                    selectedImage
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value))
-                } else {
-                    AppIcon.imagePlaceholder.image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 140, height: 140)
-                        .foregroundColor(Color.graySecondaryText.opacity(0.6))
-                }
+                AppIcon.imagePlaceholder.image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 140, height: 140)
+                    .foregroundColor(Color.graySecondaryText.opacity(0.6))
             }
             .frame(height: 220)
 

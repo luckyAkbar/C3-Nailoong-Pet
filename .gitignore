@@ -3,6 +3,7 @@
 .AppleDouble
 .LSOverride
 ._*
+.claude/
 
 # === Xcode & User Data ===
 ## Build Artifacts

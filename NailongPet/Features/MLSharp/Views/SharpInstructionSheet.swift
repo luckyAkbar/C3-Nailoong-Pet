@@ -40,10 +40,13 @@ struct SharpInstructionSheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             
-            // MARK: - Guideline Content Card
-            SharpGuidelineCard()
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
+            GuidelineCard(steps: [
+                StepItem(icon: .pawLoading,      text: "Prepare a clean photo of your pet"),
+                StepItem(icon: .infoTips,        text: "Ensure the photo has a proper lighting"),
+                StepItem(icon: .cameraGuideline, text: "Show a full body of your pet. For a better result, the photo preferably from a high/slightly high angle"),
+            ])
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
             
             Spacer()
             

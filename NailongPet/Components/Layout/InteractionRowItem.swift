@@ -8,12 +8,12 @@ struct InteractionRowItem: View {
         HStack(spacing: 16) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.BrandColorSecondary.opacity(0.2))
+                    .fill(Color.brownSecondaryBrand.opacity(0.2))
                     .frame(width: 48, height: 48)
                 
                 Image(systemName: iconName)
                     .font(.system(size: 24))
-                    .foregroundColor(Color.BrandColorSecondary)
+                    .foregroundColor(Color.brownSecondaryBrand)
             }
             
             Text(description)

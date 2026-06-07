@@ -22,10 +22,11 @@ enum AppIcon: String {
     case bringTo3D = "square.2.layers.3d"
     case interact = "hands.clap"
     case pawLoading = "pawprint.fill"
-    case walkAround = "arrow.clockwise"
     case cameraGuideline = "camera"
     case recordingPause = "pause.circle"
     case imagePlaceholder = "photo"
+    case favoriteMoment = "square.grid.3x3.square"
+    case scanCompanion = "camera.fill"
     
     /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai
     var image: Image {

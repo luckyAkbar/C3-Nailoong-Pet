@@ -1,0 +1,26 @@
+import SwiftUI
+
+struct PillButton: View {
+    var title: String
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.black)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.8))
+                .clipShape(Capsule())
+        }
+    }
+}
+
+
+#Preview {
+    ZStack {
+        Color.gray
+        PillButton(title: "Next", action: {})
+    }
+}

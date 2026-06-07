@@ -36,6 +36,7 @@ struct ProcessPage: View {
                     Gauge(value: progressPercentage, in: 0...100) {
                     } currentValueLabel: {
                         Text(String(Int(progressPercentage)) + "%")
+                            .foregroundColor(.whitePrimarySurface)
                     }
                 } else {
                     //Completeed Image
@@ -57,7 +58,7 @@ struct ProcessPage: View {
 
                     }) {
                         BrandButton(
-                            text: "Start"
+                            text: "Next"
                         )
                     }
                 }

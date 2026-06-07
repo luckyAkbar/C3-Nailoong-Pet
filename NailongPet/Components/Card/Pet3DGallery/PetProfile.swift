@@ -19,30 +19,37 @@ struct Pet3DProfile: Identifiable, Equatable {
     }
 }
 
+struct PetProfilePhoto: View {
+    var pet: Pet3DProfile
+    private let imageWhitePadding: CGFloat = 12
+    
+    var body: some View {
+        ZStack {
+            Color.orangePrimaryBrand
+
+            Image(pet.imageName)
+                .resizable()
+                .scaledToFit()
+                .padding(8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
+        .innerShadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+        .aspectRatio(1, contentMode: .fit)
+        .padding(imageWhitePadding)
+        .frame(maxWidth: .infinity)
+    }
+}
+
 struct PetProfile: View {
     let pet: Pet3DProfile
     var onTap: () -> Void = {}
 
-    private let imageWhitePadding: CGFloat = 12
     private let cardPadding: CGFloat = 2
 
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 8) {
-                ZStack {
-                    Color.orangePrimaryBrand
-
-                    Image(pet.imageName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(8)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
-                .innerShadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
-                .aspectRatio(1, contentMode: .fit)
-                .padding(imageWhitePadding)
-                .frame(maxWidth: .infinity)
-                .background(Color.beigeTertiaryBrand)
+                PetProfilePhoto(pet: pet)
 
                 Text(pet.name)
                     .font(.title2Bold)

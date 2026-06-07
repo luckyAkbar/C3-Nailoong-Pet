@@ -22,6 +22,7 @@ enum AppIcon: String {
     case bringTo3D = "square.2.layers.3d"
     case interact = "hands.clap"
     case pawLoading = "pawprint.fill"
+    case walkAround = "arrow.clockwise"
     case cameraGuideline = "camera"
     case recordingPause = "pause.circle"
     case imagePlaceholder = "photo"

@@ -21,7 +21,7 @@ struct LidarPreservedInstructionSheet: View {
         VStack(spacing: 0) {
             SheetHeaderBar(title: "3D Lidar Preserved", onClose: { dismiss() })
 
-            GuidelineCard(steps: steps)
+            CardInstructionPanelDefault(steps: steps)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
 

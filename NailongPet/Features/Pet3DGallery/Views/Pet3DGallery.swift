@@ -56,9 +56,9 @@ struct Pet3DGallery: View {
         ZStack {
             VStack(spacing: 0) {
                 if isEmpty {
-                    EmptyPetToolbars(onBack: onBack)
+                    NavigationTopBarDefault(onBack: onBack)
                 } else {
-                    FilledStateToolbar(onBack: onBack, onAdd: onAdd)
+                    NavigationTopBarFilled(onBack: onBack, onAdd: onAdd)
                 }
 
                 if isEmpty {

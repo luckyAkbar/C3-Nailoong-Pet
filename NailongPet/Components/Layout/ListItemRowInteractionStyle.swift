@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct InteractionRowItem: View {
+//previously InteractionRowItem
+struct ListItemRowInteractionStyle: View {
     var iconName: String
     var description: String
     
@@ -27,7 +28,7 @@ struct InteractionRowItem: View {
 }
 
 #Preview {
-    InteractionRowItem(
+    ListItemRowInteractionStyle(
         iconName: AppIcon.handRaised,
         description: "Try to pet your 3D pet with your hand"
     )

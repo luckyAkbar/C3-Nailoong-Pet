@@ -46,9 +46,14 @@ struct ProcessPage: View {
                     Text("Your pet has been successfully preserved and ready to interact with")
                         .foregroundColor(.graySecondaryText)
                         .multilineTextAlignment(.center)
+                    
+                    
+                    Button(action: {
 
-                    Button(action: { router.navigate(to: .processPetDetail) }) {
-                        BrandButton(text: "Next")
+                    }) {
+                        BrandButton(
+                            text: "Next"
+                        )
                     }
                 }
             }

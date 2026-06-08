@@ -40,7 +40,7 @@ struct SharpInstructionSheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             
-            GuidelineCard(steps: [
+            CardInstructionPanelDefault(steps: [
                 StepItem(icon: .pawLoading,      text: "Prepare a clean photo of your pet"),
                 StepItem(icon: .infoTips,        text: "Ensure the photo has a proper lighting"),
                 StepItem(icon: .cameraGuideline, text: "Show a full body of your pet. For a better result, the photo preferably from a high/slightly high angle"),
@@ -62,7 +62,7 @@ struct SharpInstructionSheet: View {
             Button(action: {
                 dismiss()
             }) {
-                BrandButton(
+                ButtonPrimaryDefault(
                     text: "Start"
                 )
             }

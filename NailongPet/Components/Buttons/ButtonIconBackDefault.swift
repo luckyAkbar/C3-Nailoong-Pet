@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct CircleBackButton: View {
+//previously CircleBackButton
+struct ButtonIconBackDefault: View {
     var action: () -> Void
     
     var body: some View {
@@ -18,6 +19,6 @@ struct CircleBackButton: View {
 #Preview {
     ZStack {
         Color.gray
-        CircleBackButton(action: {})
+        ButtonIconBackDefault(action: {})
     }
 }

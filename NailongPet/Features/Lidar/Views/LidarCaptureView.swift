@@ -10,19 +10,60 @@ import SwiftUI
 // MARK: - Screen Container
 
 struct LidarCaptureView: View {
+    @EnvironmentObject private var router: AppRouter
+    @Environment(\.dismiss) private var dismiss
     @State private var isShowingInstructionSheet: Bool = true
     @State private var captureState: LidarCaptureState = .idle
+    @State private var captureCount: Int = 0
+
+    // Tombol Finish aktif setelah minimal 20 foto
+    private var canFinish: Bool { captureCount >= 20 }
+
+    // Pesan instruksi berubah mengikuti kondisi
+    private var instructionMessage: String {
+        switch captureState {
+        case .idle:
+            return "Point your camera at your pet,\nthen tap record to begin"
+        case .recording:
+            if captureCount < 20 { return "Move slowly around your pet" }
+            else { return "Great! Tap Finish when you're ready" }
+        }
+    }
 
     var body: some View {
         LidarCaptureContent(
             state: captureState,
-            instructionMessage: "Point your camera at your pet,\nthen tap record to begin",
-            onTips: { isShowingInstructionSheet = true }
+            instructionMessage: instructionMessage,
+            captureCount: captureCount,
+            canFinish: canFinish,
+            onClose: { dismiss() },
+            onTips: { isShowingInstructionSheet = true },
+            onFinish: { router.navigate(to: .processPage) },
+            onShutter: {
+                // Tap shutter → mulai recording
+                withAnimation { captureState = .recording }
+            },
+            onRecordPause: {
+                // Tap pause → kembali idle, reset count
+                withAnimation { captureState = .idle }
+                captureCount = 0
+            }
         )
         .sheet(isPresented: $isShowingInstructionSheet) {
             LidarPreservedInstructionSheet()
                 .presentationDetents([.fraction(0.85)])
                 .presentationDragIndicator(.visible)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        // Simulasi auto-capture saat recording — dibatalkan otomatis saat state berubah
+        .task(id: captureState) {
+            guard captureState == .recording else { return }
+            while captureState == .recording && captureCount < 100 {
+                try? await Task.sleep(for: .milliseconds(150))
+                withAnimation {
+                    captureCount = min(captureCount + 1, 100)
+                }
+            }
         }
     }
 }
@@ -37,6 +78,9 @@ struct LidarCaptureContent: View {
     var thumbnailImageName: String? = "Moli"
     var onClose: () -> Void = {}
     var onTips: () -> Void = {}
+    var onFinish: () -> Void = {}
+    var onShutter: () -> Void = {}
+    var onRecordPause: () -> Void = {}
 
     var body: some View {
         ZStack {
@@ -55,7 +99,10 @@ struct LidarCaptureContent: View {
                     state: state,
                     captureCount: captureCount,
                     canFinish: canFinish,
-                    thumbnailImageName: thumbnailImageName
+                    thumbnailImageName: thumbnailImageName,
+                    onFinish: onFinish,
+                    onShutter: onShutter,
+                    onRecordPause: onRecordPause
                 )
             }
         }
@@ -90,7 +137,7 @@ private struct InstructionBubble: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color.whitePrimarySurface.opacity(0.9))
-            .cornerRadius(CornerRadius.small.value)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
             .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
     }
 }
@@ -121,17 +168,20 @@ private struct ControlPanel: View {
     var captureCount: Int = 0
     var canFinish: Bool = false
     var thumbnailImageName: String? = nil
+    var onFinish: () -> Void = {}
+    var onShutter: () -> Void = {}
+    var onRecordPause: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 24) {
             HStack(spacing: 0) {
-                FinishButton(isEnabled: canFinish)
+                FinishButton(isEnabled: canFinish, action: onFinish)
 
                 Spacer()
 
                 switch state {
-                case .idle:      ShutterButton()
-                case .recording: RecordPauseButton()
+                case .idle:      ShutterButton(action: onShutter)
+                case .recording: RecordPauseButton(action: onRecordPause)
                 }
 
                 Spacer()
@@ -164,9 +214,9 @@ private struct FinishButton: View {
                 .background(
                     isEnabled
                     ? Color.greenSucceedAction
-                    : Color.whitePrimarySurface.opacity(0.5)
+                    : Color.grayDisabledAction.opacity(0.5)
                 )
-                .cornerRadius(CornerRadius.full.value)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
         }
         .disabled(!isEnabled)
     }
@@ -186,6 +236,7 @@ private struct ShutterButton: View {
                     .frame(width: 58, height: 58)
             }
         }
+        .contentShape(Circle())
     }
 }
 
@@ -198,6 +249,7 @@ private struct RecordPauseButton: View {
                 .font(.system(size: 72, weight: .thin))
                 .foregroundColor(.whitePrimarySurface)
         }
+        .contentShape(Circle())
     }
 }
 
@@ -211,8 +263,7 @@ private struct CaptureThumbnail: View {
                     .resizable()
                     .scaledToFill()
                     .frame(width: 48, height: 48)
-                    .cornerRadius(CornerRadius.small.value)
-                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
                     .overlay(
                         RoundedRectangle(cornerRadius: CornerRadius.small.value)
                             .stroke(Color.whitePrimarySurface.opacity(0.4), lineWidth: 1)

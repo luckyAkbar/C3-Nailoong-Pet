@@ -27,7 +27,7 @@ struct LidarPreservedInstructionSheet: View {
 
             Spacer()
 
-            Image(AppIcon.moli.rawValue)
+            AppIcon.moli.image
                 .resizable()
                 .scaledToFit()
                 .frame(height: 160)
@@ -41,7 +41,7 @@ struct LidarPreservedInstructionSheet: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
                     .background(Color.orangePrimaryBrand)
-                    .cornerRadius(CornerRadius.full.value)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 34)
@@ -72,7 +72,7 @@ private struct SheetHeaderBar: View {
 
             Spacer()
 
-            Color.clear.frame(width: 36, height: 36)
+            Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)

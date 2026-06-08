@@ -7,6 +7,34 @@
 
 import SwiftUI
 
+// MARK: - Screen Container
+
+/// Container yang mengurus navigasi — disebarkan ke NavigationStack via ContentView.
+struct Pet3DGalleryScreen: View {
+    @EnvironmentObject private var router: AppRouter
+    @State private var showOnboarding = false
+
+    // TODO: Ganti dengan SwiftData @Query saat persistence sudah siap
+    private let pets: [Pet3DProfile] = [
+        Pet3DProfile(name: "Moli", imageName: AppIcon.moli.rawValue)
+    ]
+
+    var body: some View {
+        Pet3DGallery(
+            pets: pets,
+            showOnboarding: $showOnboarding,
+            onBack: { router.navigateToRoot() },
+            onAdd: { router.navigate(to: .choose3DGeneratorTech) },
+            onAddNow: { router.navigate(to: .choose3DGeneratorTech) },
+            onOnboardingStart: { router.navigate(to: .arInteraction) },
+            onPetTap: { pet in router.navigate(to: .petDetail(pet)) }
+        )
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
+// MARK: - Screen Content (presentational)
+
 struct Pet3DGallery: View {
     let pets: [Pet3DProfile]
     @Binding var showOnboarding: Bool
@@ -15,6 +43,7 @@ struct Pet3DGallery: View {
     var onAdd: () -> Void = {}
     var onAddNow: () -> Void = {}
     var onOnboardingStart: () -> Void = {}
+    var onPetTap: (Pet3DProfile) -> Void = { _ in }
 
     private var isEmpty: Bool { pets.isEmpty }
 
@@ -40,7 +69,7 @@ struct Pet3DGallery: View {
                     ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: gridColumns, spacing: 16) {
                             ForEach(pets) { pet in
-                                PetProfile(pet: pet)
+                                PetProfile(pet: pet, onTap: { onPetTap(pet) })
                             }
                         }
                         .padding(.horizontal, 20)
@@ -62,6 +91,8 @@ struct Pet3DGallery: View {
         .animation(.easeInOut(duration: 0.25), value: showOnboarding)
     }
 }
+
+// MARK: - Previews
 
 #Preview("Empty State") {
     Pet3DGallery(

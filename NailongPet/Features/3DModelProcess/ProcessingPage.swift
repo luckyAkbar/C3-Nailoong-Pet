@@ -8,69 +8,74 @@
 import SwiftUI
 
 struct ProcessPage: View {
-    var progressPercentage: Float = 0
-    
+    @EnvironmentObject private var router: AppRouter
+
+    /// @State karena nilainya berubah di dalam view sendiri.
+    /// Sebelumnya ini var biasa (parameter) sehingga tidak pernah berubah → stuck.
+    @State private var progressPercentage: Float = 0
+
     var body: some View {
         ZStack {
-            // Background dasar (Simulasi Kamera Feed LiDAR menggunakan token abu-abu)
             Color.blackSecondarySurface.opacity(0.8)
                 .ignoresSafeArea()
-            
-            VStack(spacing:16){
-                
+
+            VStack(spacing: 16) {
+                Image(AppIcon.moli.rawValue)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 160)
+
                 if progressPercentage < 100 {
-                    //Loading Image
-                    Image(AppIcon.moli.rawValue)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 160)
-                    
-                    //Loading Text
+                    // MARK: - Loading State
                     Text("Preserving 3D model of your pet...")
                         .foregroundColor(.whitePrimarySurface)
                         .font(.title2Bold)
                     Text("Please don’t close the app while it’s working")
                         .foregroundColor(.graySecondaryText)
-                    
-                    //Loading Progress
+
                     Gauge(value: progressPercentage, in: 0...100) {
                     } currentValueLabel: {
-                        Text(String(Int(progressPercentage)) + "%")
+                        Text("\(Int(progressPercentage))%")
                             .foregroundColor(.whitePrimarySurface)
                     }
                 } else {
-                    //Completeed Image
-                    Image(AppIcon.moli.rawValue)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 160)
-                    
-                    //Loading Text
+                    // MARK: - Complete State
                     Text("Preserving 3D model of your pet...")
                         .foregroundColor(.whitePrimarySurface)
                         .font(.title2Bold)
-                    Text("Your pet has been succesfully preserved and ready to interact with")
+                    Text("Your pet has been successfully preserved and ready to interact with")
                         .foregroundColor(.graySecondaryText)
                         .multilineTextAlignment(.center)
-                    
-                    
-                    Button(action: {
 
-                    }) {
-                        BrandButton(
-                            text: "Next"
-                        )
+                    Button(action: { router.navigate(to: .processPetDetail) }) {
+                        BrandButton(text: "Next")
                     }
                 }
-                
             }
             .padding()
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        // .task otomatis dibatalkan saat view hilang dari layar (lifecycle-safe)
+        .task {
+            // Simulasi progress — nanti diganti dengan progress ML model yang sebenarnya
+            while progressPercentage < 100 {
+                try? await Task.sleep(for: .milliseconds(50))
+                withAnimation(.linear(duration: 0.05)) {
+                    progressPercentage = min(progressPercentage + 2, 100)
+                }
+            }
         }
     }
 }
 
-#Preview {
-    ProcessPage(
-        progressPercentage : 100
-    )
+#Preview("Loading") {
+    ProcessPage()
+        .environmentObject(AppRouter())
+}
+
+#Preview("Complete") {
+    // Paksa state complete untuk preview statis
+    ProcessPage()
+        .environmentObject(AppRouter())
+        .onAppear { }
 }

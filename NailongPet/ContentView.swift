@@ -2,57 +2,52 @@
 //  ContentView.swift
 //  NailongPet
 //
-//  Created by Fakhri Djamaris on 05/06/26.
+//  Root view aplikasi.
+//  - Jika onboarding belum selesai → tampilkan OnboardingScreen.
+//  - Jika sudah → masuk ke NavigationStack dengan Home sebagai root.
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+
+    /// Disimpan di UserDefaults agar tetap tersimpan walau app ditutup.
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
+    /// Router dibuat di sini (root) lalu disebarkan ke seluruh view via environmentObject.
+    @StateObject private var router = AppRouter()
 
     var body: some View {
-        Home()
-//        NavigationSplitView {
-//            List {
-//                ForEach(items) { item in
-//                    NavigationLink {
-//                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-//                    } label: {
-//                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-//                    }
-//                }
-//                .onDelete(perform: deleteItems)
-//            }
-//            .toolbar {
-//                ToolbarItem(placement: .navigationBarTrailing) {
-//                    EditButton()
-//                }
-//                ToolbarItem {
-//                    Button(action: addItem) {
-//                        Label("Add Item", systemImage: "plus")
-//                    }
-//                }
-//            }
-//        } detail: {
-//            Text("Select an item")
-//        }
-//    }
-//
-//    private func addItem() {
-//        withAnimation {
-//            let newItem = Item(timestamp: Date())
-//            modelContext.insert(newItem)
-//        }
-//    }
-//
-//    private func deleteItems(offsets: IndexSet) {
-//        withAnimation {
-//            for index in offsets {
-//                modelContext.delete(items[index])
-//            }
-//        }
+        if hasCompletedOnboarding {
+            NavigationStack(path: $router.path) {
+                Home()
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .choose3DGeneratorTech:
+                            Choose3DGeneratorTech()
+                        case .mlSharp:
+                            SharpImageSelectionView()
+                        case .lidar:
+                            LidarCaptureView()
+                        case .processPage:
+                            ProcessPage()
+                        case .processPetDetail:
+                            ProcessPetDetail()
+                        case .pet3DGallery:
+                            Pet3DGalleryScreen()
+                        case .petDetail(let pet):
+                            PetDetail(pet: pet)
+                        case .arInteraction:
+                            ARInteractionScreen()
+                        }
+                    }
+            }
+            .environmentObject(router)
+        } else {
+            OnboardingScreen(onFinish: {
+                hasCompletedOnboarding = true
+            })
+        }
     }
 }
 

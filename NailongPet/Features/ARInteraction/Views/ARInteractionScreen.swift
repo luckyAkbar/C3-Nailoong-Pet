@@ -71,6 +71,7 @@ struct ARInteractionScreen: View {
                 Spacer()
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 

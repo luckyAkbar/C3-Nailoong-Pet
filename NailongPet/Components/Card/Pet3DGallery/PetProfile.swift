@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Pet3DProfile: Identifiable, Equatable {
+struct Pet3DProfile: Identifiable, Equatable, Hashable {
     let id: UUID
     let name: String
     let imageName: String

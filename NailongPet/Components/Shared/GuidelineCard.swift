@@ -26,7 +26,7 @@ struct GuidelineCard: View {
         }
         .padding(24)
         .background(Color.brownSecondaryBrand)
-        .cornerRadius(CornerRadius.medium.value)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value))
     }
 }
 

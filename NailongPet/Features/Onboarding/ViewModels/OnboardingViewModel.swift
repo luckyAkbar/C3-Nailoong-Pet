@@ -3,20 +3,25 @@ import Combine
 
 class OnboardingViewModel: ObservableObject {
     @Published var currentPage: Int = 0
-    
-    func skip() {
-        // Handle skip logic, e.g., navigate to next flow or Home
-        print("Onboarding Skipped")
+
+    /// Closure yang dipanggil saat user selesai atau melewati onboarding.
+    var onFinish: () -> Void
+
+    init(onFinish: @escaping () -> Void = {}) {
+        self.onFinish = onFinish
     }
-    
+
+    func skip() {
+        onFinish()
+    }
+
     func next() {
         if currentPage < 1 {
             withAnimation {
                 currentPage += 1
             }
         } else {
-            // Handle start logic, e.g., Permission request or Home
-            print("Onboarding Finished, Start!")
+            onFinish()
         }
     }
 }

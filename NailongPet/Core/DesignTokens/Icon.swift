@@ -29,6 +29,13 @@ enum AppIcon: String {
     case favoriteMoment = "square.grid.3x3.square"
     case scanCompanion = "camera.fill"
     
+    //AR interaction Icon
+    static let chevronLeft = "chevron.left"
+    static let pawPrint = "pawprint.fill"
+    static let handRaised = "hand.raised.fill"
+    static let handTap = "hand.tap.fill"
+    static let personWave = "person.wave.2.fill"
+    
     /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai
     var image: Image {
         return Image(systemName: self.rawValue)

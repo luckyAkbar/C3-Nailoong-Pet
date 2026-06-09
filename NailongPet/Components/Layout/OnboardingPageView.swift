@@ -12,7 +12,7 @@ struct OnboardingPageView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Spacer()
-                PillButton(title: "Skip", action: onSkip)
+                ButtonPillDefault(title: "Skip", action: onSkip)
             }
             .padding(.top, 20)
             

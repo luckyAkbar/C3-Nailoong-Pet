@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct PetDetailToolbar: View {
+//previously PetDetailToolbar
+struct NavigationTopBarPetPage: View {
     @State private var isShowingEditModal: Bool = false
     
     var onBack: () -> Void = {}
@@ -129,6 +130,6 @@ struct EditPetProfileModal: View {
 }
 
 #Preview {
-    PetDetailToolbar()
+    NavigationTopBarPetPage()
         .background(Color.beigeTertiaryBrand)
 }

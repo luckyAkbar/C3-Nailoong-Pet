@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct MenuSelection: View {
+//previously MenuSelection
+struct CardMenuSelectionDefault: View {
     let icon: AppIcon
     let title: String
     let subtitle: String
@@ -89,12 +90,12 @@ struct MenuSelection: View {
 
 #Preview {
     VStack(spacing: 20) {
-        MenuSelection(
+        CardMenuSelectionDefault(
             icon: .bringTo3D,
             title: "Bring Pet to 3D",
             subtitle: "Preserve the moment with your pet"
         )
-        MenuSelection(
+        CardMenuSelectionDefault(
             icon: .interact,
             title: "Interact",
             subtitle: "Feel the presence of your 3D companion"

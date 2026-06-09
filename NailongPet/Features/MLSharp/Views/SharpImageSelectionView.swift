@@ -54,14 +54,14 @@ struct SharpImageSelectionView: View {
             // MARK: - Photo Picker
             PhotosPicker(selection: $selectedItem, matching: .images) {
                 if selectedImage != nil {
-                    MenuSelection(
+                    CardMenuSelectionDefault(
                         icon: .cameraGuideline,
                         title: "Choose your pet photo",
                         subtitle: "Preserve the moment with your pet",
                         selectedImage: $selectedImage
                     ).padding()
                 } else {
-                    MenuSelection(
+                    CardMenuSelectionDefault(
                         icon: .cameraGuideline,
                         title: "Choose your pet photo",
                         subtitle: "Preserve the moment with your pet"
@@ -80,9 +80,10 @@ struct SharpImageSelectionView: View {
             Spacer()
 
             // MARK: - Start Button
-            Button(action: { router.navigate(to: .processPage) }) {
-                BrandButton(text: "Start")
-            }
+            ButtonPrimaryDefault(
+                text: "Start",
+                action: { router.navigate(to: .processPage) }
+            )
         }
         // MARK: - Instruction Sheet
         .sheet(isPresented: $isShowingInstructionSheet) {

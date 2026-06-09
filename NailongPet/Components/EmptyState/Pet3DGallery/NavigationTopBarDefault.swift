@@ -7,7 +7,10 @@
 
 import SwiftUI
 
-struct EmptyPetToolbars: View {
+//previously EmptyPetToolbars
+struct NavigationTopBarDefault: View {
+    var title: String = "Memento Mori"
+    
     var onBack: () -> Void = {}
 
     var body: some View {
@@ -22,7 +25,7 @@ struct EmptyPetToolbars: View {
                 Spacer()
             }
 
-            Text("Memento Mori")
+            Text(title)
                 .font(.title2Bold)
                 .foregroundColor(.blackPrimaryText)
         }
@@ -32,6 +35,6 @@ struct EmptyPetToolbars: View {
 }
 
 #Preview {
-    EmptyPetToolbars()
+    NavigationTopBarDefault(title: "Memento Mori")
         .background(Color.beigeTertiaryBrand)
 }

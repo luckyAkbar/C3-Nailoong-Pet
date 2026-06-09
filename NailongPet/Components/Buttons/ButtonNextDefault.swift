@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct PillButton: View {
+//previously PillButton
+struct ButtonPillDefault: View {
     var title: String
     var action: () -> Void
     
@@ -21,6 +22,6 @@ struct PillButton: View {
 #Preview {
     ZStack {
         Color.gray
-        PillButton(title: "Next", action: {})
+        ButtonPillDefault(title: "Next", action: {})
     }
 }

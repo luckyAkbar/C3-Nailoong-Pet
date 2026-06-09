@@ -19,7 +19,7 @@ struct Home: View {
                 .padding(.top, 25)
 
             Button(action: { router.navigate(to: .choose3DGeneratorTech) }) {
-                MenuSelection(
+                CardMenuSelectionDefault(
                     icon: .bringTo3D,
                     title: "Bring Pet to 3D",
                     subtitle: "Preserve the moment with your pet"
@@ -28,7 +28,7 @@ struct Home: View {
             .buttonStyle(.plain)
 
             Button(action: { router.navigate(to: .pet3DGallery) }) {
-                MenuSelection(
+                CardMenuSelectionDefault(
                     icon: .interact,
                     title: "Interact",
                     subtitle: "Feel the presence of your 3D companion"

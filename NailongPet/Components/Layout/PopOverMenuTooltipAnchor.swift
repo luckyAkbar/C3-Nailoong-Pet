@@ -5,7 +5,7 @@ struct PopOverMenuTooltipAnchor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Interaction List")
-                .font(.system(size: 16, weight: .bold))
+                .font(.calloutBold)
                 .foregroundColor(.black)
                 .padding(.bottom, 8)
             

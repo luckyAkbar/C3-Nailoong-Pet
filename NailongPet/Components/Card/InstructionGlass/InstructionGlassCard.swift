@@ -16,12 +16,12 @@ struct InstructionGlassCard: View {
             
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.calloutBold)
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                
+
                 Text(instruction)
-                    .font(.system(size: 14))
+                    .font(.subheadRegular)
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
             }

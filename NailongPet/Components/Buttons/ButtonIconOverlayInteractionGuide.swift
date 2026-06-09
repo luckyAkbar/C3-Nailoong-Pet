@@ -10,12 +10,11 @@ struct ButtonIconOverlayInteractionGuide: View {
                 VStack(spacing: 2) {
                     ZStack {
                         Image(systemName: AppIcon.pawPrint)
-                            .font(.system(size: 18))
+                            .font(.title3Bold)
                         Text("?")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.captionRegular)
                             .offset(x: 11, y: -11)
                     }
-                    
                 }
                 .foregroundColor(.black)
                 .padding(8)
@@ -23,7 +22,7 @@ struct ButtonIconOverlayInteractionGuide: View {
                 .cornerRadius(8)
             }
             Text("Interaction Guide")
-                .font(.system(size: 8, weight: .semibold))
+                .font(.captionRegular)
                 .foregroundColor(.whitePrimarySurface)
         }
         

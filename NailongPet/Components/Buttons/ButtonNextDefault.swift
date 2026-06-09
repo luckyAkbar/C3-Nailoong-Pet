@@ -8,7 +8,7 @@ struct ButtonPillDefault: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.subheadBold)
                 .foregroundColor(.black)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

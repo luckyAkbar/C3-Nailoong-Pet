@@ -17,7 +17,7 @@ struct NavigationTopBarFilled: View {
             HStack {
                 Button(action: onBack) {
                     AppIcon.back.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                 }
                 .buttonStyle(.glass)
 

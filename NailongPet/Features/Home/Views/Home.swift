@@ -8,33 +8,44 @@
 import SwiftUI
 
 struct Home: View {
+    @EnvironmentObject private var router: AppRouter
+
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Nailong Pet")
                 .font(Font.title1Bold)
+                .foregroundColor(.blackPrimaryText)
                 .multilineTextAlignment(.leading)
                 .padding(.top, 25)
 
-            MenuSelection(
-                icon: .bringTo3D,
-                title: "Bring Pet to 3D",
-                subtitle: "Preserve the moment with your pet"
-            )
+            Button(action: { router.navigate(to: .choose3DGeneratorTech) }) {
+                MenuSelection(
+                    icon: .bringTo3D,
+                    title: "Bring Pet to 3D",
+                    subtitle: "Preserve the moment with your pet"
+                )
+            }
+            .buttonStyle(.plain)
 
-            MenuSelection(
-                icon: .interact,
-                title: "Interact",
-                subtitle: "Feel the presence of your 3D companion"
-            )
+            Button(action: { router.navigate(to: .pet3DGallery) }) {
+                MenuSelection(
+                    icon: .interact,
+                    title: "Interact",
+                    subtitle: "Feel the presence of your 3D companion"
+                )
+            }
+            .buttonStyle(.plain)
 
             Spacer()
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.beigeTertiaryBrand.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
 #Preview {
     Home()
+        .environmentObject(AppRouter())
 }

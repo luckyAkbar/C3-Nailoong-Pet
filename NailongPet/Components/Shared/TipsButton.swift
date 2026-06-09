@@ -21,7 +21,7 @@ struct TipsButton: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .background(Color.whitePrimarySurface.opacity(0.8))
-            .cornerRadius(CornerRadius.full.value)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
         }
     }
 }

@@ -36,8 +36,12 @@ enum AppIcon: String {
     static let handTap = "hand.tap.fill"
     static let personWave = "person.wave.2.fill"
     
-    /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai
+    /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai.
+    /// Case .moli menggunakan Image asset, sisanya SF Symbol.
     var image: Image {
-        return Image(systemName: self.rawValue)
+        switch self {
+        case .moli: return Image(self.rawValue)
+        default:    return Image(systemName: self.rawValue)
+        }
     }
 }

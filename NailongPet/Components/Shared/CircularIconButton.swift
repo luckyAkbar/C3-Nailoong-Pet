@@ -21,6 +21,7 @@ struct CircularIconButton: View {
                 .padding(10)
                 .background(background)
                 .clipShape(Circle())
+                .frame(width: 44, height: 44) // minimum tap area sesuai Apple HIG
         }
     }
 }

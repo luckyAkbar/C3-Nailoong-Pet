@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct OnboardingScreen: View {
-    @StateObject private var viewModel = OnboardingViewModel()
+    @StateObject private var viewModel: OnboardingViewModel
+
+    init(onFinish: @escaping () -> Void = {}) {
+        _viewModel = StateObject(wrappedValue: OnboardingViewModel(onFinish: onFinish))
+    }
     
     var body: some View {
         ZStack {

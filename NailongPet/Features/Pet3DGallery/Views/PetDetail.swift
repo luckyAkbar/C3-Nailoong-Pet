@@ -14,7 +14,7 @@ struct PetDetail: View {
 
     var body: some View {
         VStack {
-            PetDetailToolbar(onBack: { router.navigateBack() })
+            NavigationTopBarPetPage(onBack: { router.navigateBack() })
 
             Spacer()
 

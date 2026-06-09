@@ -69,7 +69,7 @@ struct Pet3DGallery: View {
                     ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: gridColumns, spacing: 16) {
                             ForEach(pets) { pet in
-                                PetProfile(pet: pet, onTap: { onPetTap(pet) })
+                                CardPetItemDefault(pet: pet, onTap: { onPetTap(pet) })
                             }
                         }
                         .padding(.horizontal, 20)

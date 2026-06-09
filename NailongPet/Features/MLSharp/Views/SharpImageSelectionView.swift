@@ -80,9 +80,10 @@ struct SharpImageSelectionView: View {
             Spacer()
 
             // MARK: - Start Button
-            Button(action: { router.navigate(to: .processPage) }) {
-                BrandButton(text: "Start")
-            }
+            ButtonPrimaryDefault(
+                text: "Start",
+                action: { router.navigate(to: .processPage) }
+            )
         }
         // MARK: - Instruction Sheet
         .sheet(isPresented: $isShowingInstructionSheet) {

@@ -59,13 +59,10 @@ struct SharpInstructionSheet: View {
             Spacer()
             
             // MARK: - Bottom Action Button
-            Button(action: {
-                dismiss()
-            }) {
-                ButtonPrimaryDefault(
-                    text: "Start"
-                )
-            }
+            ButtonPrimaryDefault(
+                text: "Start",
+                action: { dismiss() }
+            )
         }
         .background(Color.whitePrimarySurface) // Token Warna Latar Sheet
     }

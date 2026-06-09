@@ -34,17 +34,10 @@ struct LidarPreservedInstructionSheet: View {
 
             Spacer()
 
-            Button(action: { dismiss() }) {
-                Text("Start")
-                    .font(.subheadRegular)
-                    .foregroundColor(.whitePrimarySurface)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.orangePrimaryBrand)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
-            }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 34)
+            ButtonPrimaryDefault(
+                text: "Start",
+                action: { dismiss() }
+            )
         }
         .background(Color.whitePrimarySurface)
     }

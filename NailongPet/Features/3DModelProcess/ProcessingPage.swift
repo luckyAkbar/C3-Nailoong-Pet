@@ -48,13 +48,10 @@ struct ProcessPage: View {
                         .multilineTextAlignment(.center)
                     
                     
-                    Button(action: {
-
-                    }) {
-                        BrandButton(
-                            text: "Next"
-                        )
-                    }
+                    ButtonPrimaryDefault(
+                        text: "Next",
+                        action: { router.navigate(to: .processPetDetail) }
+                    )
                 }
             }
             .padding()

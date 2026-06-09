@@ -48,7 +48,7 @@ struct MenuSelection: View {
 
             HStack(spacing: 12) {
                 icon.image
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.title1Bold)
                     .foregroundColor(Color.blackPrimaryText)
 
                 VStack(alignment: .leading, spacing: 2) {

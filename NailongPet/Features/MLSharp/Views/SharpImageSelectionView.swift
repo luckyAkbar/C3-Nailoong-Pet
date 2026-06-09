@@ -23,7 +23,7 @@ struct SharpImageSelectionView: View {
                 // Tombol Cancel/Close (Ikon X)
                 Button(action: { dismiss() }) {
                     AppIcon.close.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                         .foregroundColor(.blackPrimaryText)
                         .padding(10)
                         .background(Color.blackSecondarySurface.opacity(0.1))

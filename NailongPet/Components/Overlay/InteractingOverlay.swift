@@ -6,13 +6,13 @@ struct InteractingOverlay: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("Move iPhone to start")
-                .font(.system(size: 16))
+                .font(.calloutRegular)
                 .foregroundColor(.white)
                 .shadow(radius: 4)
-            
+
             Button(action: action) {
                 Text("Try to get close...")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.subheadRegular)
                     .foregroundColor(.white.opacity(0.5))
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)

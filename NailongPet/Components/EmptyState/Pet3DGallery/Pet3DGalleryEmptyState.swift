@@ -50,18 +50,17 @@ struct Pet3DPawPrintCluster: View {
     var body: some View {
         ZStack {
             AppIcon.pawLoading.image
-                .font(.system(size: 48, weight: .bold))
+                .font(.title1Bold)
                 .offset(x: -22, y: -35)
                 .rotationEffect(.degrees(-15))
-                
 
             AppIcon.pawLoading.image
-                .font(.system(size: 34, weight: .bold))
+                .font(.largeTitleBold)
                 .offset(x: 28, y: -8)
                 .rotationEffect(.degrees(12))
 
             AppIcon.pawLoading.image
-                .font(.system(size: 34, weight: .bold))
+                .font(.largeTitleBold)
                 .offset(x: -22, y: 35)
                 .rotationEffect(.degrees(-12))
         }

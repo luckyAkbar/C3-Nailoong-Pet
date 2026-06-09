@@ -18,7 +18,7 @@ struct SharpInstructionSheet: View {
             HStack {
                 Button(action: { dismiss() }) {
                     AppIcon.close.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                         .foregroundColor(.blackPrimaryText)
                         .padding(10)
                         .background(Color.graySecondaryText.opacity(0.15))

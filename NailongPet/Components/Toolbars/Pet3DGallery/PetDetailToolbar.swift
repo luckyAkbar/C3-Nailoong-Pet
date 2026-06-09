@@ -18,7 +18,7 @@ struct PetDetailToolbar: View {
             HStack {
                 Button(action: onBack) {
                     AppIcon.back.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                 }
                 .buttonStyle(.glass)
 
@@ -108,7 +108,7 @@ struct EditPetProfileModal: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
+                            .font(.subheadBold)
                             .foregroundColor(.primary)
                     }
                 }
@@ -119,7 +119,7 @@ struct EditPetProfileModal: View {
                         dismiss()
                     }) {
                         Image(systemName: "checkmark")
-                            .font(.body.weight(.semibold))
+                            .font(.subheadBold)
                             .foregroundColor(.primary)
                     }
                 }

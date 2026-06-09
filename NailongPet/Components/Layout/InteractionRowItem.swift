@@ -12,12 +12,12 @@ struct InteractionRowItem: View {
                     .frame(width: 48, height: 48)
                 
                 Image(systemName: iconName)
-                    .font(.system(size: 24))
+                    .font(.title2Bold)
                     .foregroundColor(Color.brownSecondaryBrand)
             }
-            
+
             Text(description)
-                .font(.system(size: 12, weight: .medium))
+                .font(.captionRegular)
                 .foregroundColor(.black)
                 .fixedSize(horizontal: false, vertical: true)
             

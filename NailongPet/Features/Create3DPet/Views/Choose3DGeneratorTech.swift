@@ -17,7 +17,7 @@ struct Choose3DGeneratorTech: View {
                 HStack {
                     Button(action: { router.navigateBack() }) {
                         AppIcon.back.image
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.calloutBold)
                     }
                     .buttonStyle(.glass)
                     Spacer()

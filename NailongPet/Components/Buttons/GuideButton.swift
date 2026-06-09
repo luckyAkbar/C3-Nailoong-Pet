@@ -8,13 +8,13 @@ struct GuideButton: View {
             VStack(spacing: 2) {
                 HStack(alignment: .top, spacing: 0) {
                     Image(systemName: AppIcon.pawPrint)
-                        .font(.system(size: 18))
+                        .font(.title3Bold)
                     Text("?")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.captionRegular)
                         .offset(x: 2, y: -4)
                 }
                 Text("Interaction Guide")
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.captionRegular)
             }
             .foregroundColor(.black)
             .padding(8)

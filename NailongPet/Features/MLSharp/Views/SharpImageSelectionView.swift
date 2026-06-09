@@ -20,31 +20,14 @@ struct SharpImageSelectionView: View {
         VStack {
             // MARK: - Top Navigation Bar
             HStack {
-                // Tombol Cancel/Close (Ikon X)
-                Button(action: { dismiss() }) {
-                    AppIcon.close.image
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.blackPrimaryText)
-                        .padding(10)
-                        .background(Color.blackSecondarySurface.opacity(0.1))
-                        .clipShape(Circle())
-                }
-
+                CircularIconButton(
+                    icon: .close,
+                    background: Color.blackSecondarySurface.opacity(0.1),
+                    foreground: .blackPrimaryText,
+                    action: { dismiss() }
+                )
                 Spacer()
-
-                // Tombol Tips untuk memicu sheet instruksi muncul kembali
-                Button(action: { isShowingInstructionSheet = true }) {
-                    HStack(spacing: 4) {
-                        AppIcon.infoTips.image
-                        Text("Tips")
-                            .font(.footnoteRegular)
-                    }
-                    .foregroundColor(.blackPrimaryText)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.blackSecondarySurface.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
-                }
+                TipsButton(action: { isShowingInstructionSheet = true })
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)

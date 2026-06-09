@@ -53,36 +53,35 @@ struct ProcessPetDetail: View {
 
             VStack(alignment: .leading) {
                 Text("Description")
-                    .bold(true)
+                    .font(.subheadRegular)
+                    .bold()
 
                 Divider()
+                    .background(Color.whitePrimarySurface.opacity(0.5))
 
                 TextField("Pet description", text: $petDescription, axis: .vertical)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Color.whitePrimarySurface)
+                    .font(.subheadRegular)
                     .lineLimit(4, reservesSpace: true)
             }
             .padding(15)
-            .frame(width: 362, height: 199, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 199, alignment: .leading)
             .background(Color.orangePrimaryBrand)
-            .clipShape(RoundedRectangle(cornerRadius: 26))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value))
 
             Spacer()
             Spacer()
             Spacer()
 
-            // Setelah simpan → ke Pet3DGallery
+            // Setelah simpan → ke Pet3DGallery — Button/FormAction/Active|Disabled
             Button(action: { router.navigate(to: .pet3DGallery) }) {
-                Text("Done")
+                Text("Save")
                     .font(.subheadRegular)
-                    .foregroundColor(isFormEmpty ? .blackPrimaryText : .whitePrimarySurface)
-                    .frame(width: 179, height: 55)
+                    .foregroundStyle(isFormEmpty ? Color.blackPrimaryText : Color.whitePrimarySurface)
+                    .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(isFormEmpty ? Color.whitePrimarySurface : Color.orangePrimaryBrand)
+                    .background(isFormEmpty ? Color.grayDisabledAction.opacity(0.4) : Color.orangePrimaryBrand)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
-                    .shadow(
-                        color: isFormEmpty ? Color.graySecondaryText : Color.orangePrimaryBrand.opacity(0.35),
-                        radius: 8, x: 0, y: 4
-                    )
             }
             .disabled(isFormEmpty)
             .padding(.horizontal, 40)

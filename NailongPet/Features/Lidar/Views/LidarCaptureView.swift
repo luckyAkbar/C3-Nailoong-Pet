@@ -8,7 +8,6 @@
 import SwiftUI
 
 // MARK: - Screen Container
-
 struct LidarCaptureView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
@@ -69,7 +68,6 @@ struct LidarCaptureView: View {
 }
 
 // MARK: - Screen Content (presentational)
-
 struct LidarCaptureContent: View {
     var state: LidarCaptureState = .idle
     var instructionMessage: String = ""
@@ -110,7 +108,6 @@ struct LidarCaptureContent: View {
 }
 
 // MARK: - Private Sub-views
-
 private struct CaptureTopBar: View {
     var onClose: () -> Void = {}
     var onTips: () -> Void = {}

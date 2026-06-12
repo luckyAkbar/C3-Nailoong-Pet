@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct InteractionRowItem: View {
+//previously InteractionRowItem
+struct ListItemRowInteractionStyle: View {
     var iconName: String
     var description: String
     
@@ -12,12 +13,12 @@ struct InteractionRowItem: View {
                     .frame(width: 48, height: 48)
                 
                 Image(systemName: iconName)
-                    .font(.system(size: 24))
+                    .font(.title2Bold)
                     .foregroundColor(Color.brownSecondaryBrand)
             }
-            
+
             Text(description)
-                .font(.system(size: 12, weight: .medium))
+                .font(.captionRegular)
                 .foregroundColor(.black)
                 .fixedSize(horizontal: false, vertical: true)
             
@@ -27,7 +28,7 @@ struct InteractionRowItem: View {
 }
 
 #Preview {
-    InteractionRowItem(
+    ListItemRowInteractionStyle(
         iconName: AppIcon.handRaised,
         description: "Try to pet your 3D pet with your hand"
     )

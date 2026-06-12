@@ -12,7 +12,8 @@ struct StepItem {
     var text: String
 }
 
-struct GuidelineCard: View {
+//previously GuidelineCard
+struct CardInstructionPanelDefault: View {
     var steps: [StepItem]
 
     var body: some View {
@@ -31,7 +32,7 @@ struct GuidelineCard: View {
 }
 
 #Preview("LiDAR Steps") {
-    GuidelineCard(steps: [
+    CardInstructionPanelDefault(steps: [
         StepItem(icon: .pawLoading,      text: "Scan while your pet is sleeping soundly"),
         StepItem(icon: .infoTips,        text: "Ensure even, bright room lighting"),
         StepItem(icon: .walkAround,      text: "Walk 360° around your pet slowly"),
@@ -41,7 +42,7 @@ struct GuidelineCard: View {
 }
 
 #Preview("ML Sharp Steps") {
-    GuidelineCard(steps: [
+    CardInstructionPanelDefault(steps: [
         StepItem(icon: .pawLoading,      text: "Prepare a clean photo of your pet"),
         StepItem(icon: .infoTips,        text: "Ensure the photo has a proper lighting"),
         StepItem(icon: .cameraGuideline, text: "Show a full body of your pet. For a better result, the photo preferably from a high/slightly high angle"),

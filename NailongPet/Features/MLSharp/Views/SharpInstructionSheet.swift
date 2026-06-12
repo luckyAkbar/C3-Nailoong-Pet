@@ -18,7 +18,7 @@ struct SharpInstructionSheet: View {
             HStack {
                 Button(action: { dismiss() }) {
                     AppIcon.close.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                         .foregroundColor(.blackPrimaryText)
                         .padding(10)
                         .background(Color.graySecondaryText.opacity(0.15))
@@ -40,7 +40,7 @@ struct SharpInstructionSheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 20)
             
-            GuidelineCard(steps: [
+            CardInstructionPanelDefault(steps: [
                 StepItem(icon: .pawLoading,      text: "Prepare a clean photo of your pet"),
                 StepItem(icon: .infoTips,        text: "Ensure the photo has a proper lighting"),
                 StepItem(icon: .cameraGuideline, text: "Show a full body of your pet. For a better result, the photo preferably from a high/slightly high angle"),
@@ -59,13 +59,10 @@ struct SharpInstructionSheet: View {
             Spacer()
             
             // MARK: - Bottom Action Button
-            Button(action: {
-                dismiss()
-            }) {
-                BrandButton(
-                    text: "Start"
-                )
-            }
+            ButtonPrimaryDefault(
+                text: "Start",
+                action: { dismiss() }
+            )
         }
         .background(Color.whitePrimarySurface) // Token Warna Latar Sheet
     }

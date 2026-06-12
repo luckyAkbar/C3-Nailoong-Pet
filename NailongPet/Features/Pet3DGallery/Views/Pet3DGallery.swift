@@ -56,9 +56,9 @@ struct Pet3DGallery: View {
         ZStack {
             VStack(spacing: 0) {
                 if isEmpty {
-                    EmptyPetToolbars(onBack: onBack)
+                    NavigationTopBarDefault(onBack: onBack)
                 } else {
-                    FilledStateToolbar(onBack: onBack, onAdd: onAdd)
+                    NavigationTopBarFilled(onBack: onBack, onAdd: onAdd)
                 }
 
                 if isEmpty {
@@ -69,7 +69,7 @@ struct Pet3DGallery: View {
                     ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: gridColumns, spacing: 16) {
                             ForEach(pets) { pet in
-                                PetProfile(pet: pet, onTap: { onPetTap(pet) })
+                                CardPetItemDefault(pet: pet, onTap: { onPetTap(pet) })
                             }
                         }
                         .padding(.horizontal, 20)

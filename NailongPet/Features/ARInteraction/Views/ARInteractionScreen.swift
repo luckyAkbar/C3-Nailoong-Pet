@@ -11,26 +11,26 @@ struct ARInteractionScreen: View {
             
             VStack {
                 HStack(alignment: .top) {
-                    CircleBackButton {
+                    ButtonIconBackDefault {
                         dismiss()
                     }
                     
                     Spacer()
                     
                     if viewModel.currentState == .interacting || viewModel.currentState == .placing {
-                        GuideButton {
+                        ButtonIconOverlayInteractionGuide {
                             withAnimation {
                                 viewModel.togglePopup()
                             }
                         }
                         .overlay(alignment: .topTrailing) {
                             if viewModel.showInteractionPopup {
-                                InteractionPopup()
+                                PopOverMenuTooltipAnchor()
                                     .offset(x: -8, y: 60)
                             }
                         }
                     } else {
-                        PillButton(title: "Next") {
+                        ButtonPillDefault(title: "Next") {
                             withAnimation {
                                 viewModel.nextState()
                             }

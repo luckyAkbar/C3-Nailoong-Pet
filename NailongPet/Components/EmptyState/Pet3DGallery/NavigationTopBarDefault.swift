@@ -7,7 +7,10 @@
 
 import SwiftUI
 
-struct EmptyPetToolbars: View {
+//previously EmptyPetToolbars
+struct NavigationTopBarDefault: View {
+    var title: String = "Memento Mori"
+    
     var onBack: () -> Void = {}
 
     var body: some View {
@@ -15,14 +18,14 @@ struct EmptyPetToolbars: View {
             HStack {
                 Button(action: onBack) {
                     AppIcon.back.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                 }
                 .buttonStyle(.glass)
 
                 Spacer()
             }
 
-            Text("Memento Mori")
+            Text(title)
                 .font(.title2Bold)
                 .foregroundColor(.blackPrimaryText)
         }
@@ -32,6 +35,6 @@ struct EmptyPetToolbars: View {
 }
 
 #Preview {
-    EmptyPetToolbars()
+    NavigationTopBarDefault(title: "Memento Mori")
         .background(Color.beigeTertiaryBrand)
 }

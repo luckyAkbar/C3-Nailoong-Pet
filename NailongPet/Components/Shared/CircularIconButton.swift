@@ -16,7 +16,7 @@ struct CircularIconButton: View {
     var body: some View {
         Button(action: action) {
             icon.image
-                .font(.system(size: 16, weight: .bold))
+                .font(.calloutBold)
                 .foregroundColor(foreground)
                 .padding(10)
                 .background(background)

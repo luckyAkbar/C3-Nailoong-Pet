@@ -8,7 +8,6 @@
 import SwiftUI
 
 // MARK: - Screen Container
-
 struct LidarCaptureView: View {
     @EnvironmentObject private var router: AppRouter
     @Environment(\.dismiss) private var dismiss
@@ -69,7 +68,6 @@ struct LidarCaptureView: View {
 }
 
 // MARK: - Screen Content (presentational)
-
 struct LidarCaptureContent: View {
     var state: LidarCaptureState = .idle
     var instructionMessage: String = ""
@@ -84,9 +82,18 @@ struct LidarCaptureContent: View {
 
     var body: some View {
         ZStack {
-            CameraPreviewPlaceholder()
+            // Live kamera feed sebagai background
+            CameraLivePreview()
                 .ignoresSafeArea()
 
+            // Overlay scanning effect (grid + scan line + brackets)
+            LidarScanOverlay(
+                captureCount: captureCount,
+                isScanning: state == .recording
+            )
+            .ignoresSafeArea()
+
+            // UI controls di atas kamera
             VStack {
                 CaptureTopBar(onClose: onClose, onTips: onTips)
 
@@ -110,7 +117,6 @@ struct LidarCaptureContent: View {
 }
 
 // MARK: - Private Sub-views
-
 private struct CaptureTopBar: View {
     var onClose: () -> Void = {}
     var onTips: () -> Void = {}
@@ -139,27 +145,6 @@ private struct InstructionBubble: View {
             .background(Color.whitePrimarySurface.opacity(0.9))
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
             .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
-    }
-}
-
-private struct CameraPreviewPlaceholder: View {
-    var body: some View {
-        ZStack {
-            Color.graySecondaryText
-
-            VStack(spacing: 16) {
-                RoundedRectangle(cornerRadius: CornerRadius.medium.value)
-                    .strokeBorder(
-                        Color.whitePrimarySurface.opacity(0.6),
-                        style: StrokeStyle(lineWidth: 2, dash: [6, 6])
-                    )
-                    .frame(width: 170, height: 120)
-
-                Text("Move iPhone to start")
-                    .font(.subheadRegular)
-                    .foregroundColor(.whitePrimarySurface.opacity(0.85))
-            }
-        }
     }
 }
 

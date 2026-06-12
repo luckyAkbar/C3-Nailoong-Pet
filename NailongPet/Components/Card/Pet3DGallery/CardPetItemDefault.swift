@@ -40,7 +40,8 @@ struct PetProfilePhoto: View {
     }
 }
 
-struct PetProfile: View {
+//previously PetProfile
+struct CardPetItemDefault: View {
     let pet: Pet3DProfile
     var onTap: () -> Void = {}
 
@@ -68,7 +69,7 @@ struct PetProfile: View {
 }
 
 #Preview {
-    PetProfile(
+    CardPetItemDefault(
         pet: Pet3DProfile(name: "Moli", imageName: AppIcon.moli.rawValue)
     )
     .padding(24)

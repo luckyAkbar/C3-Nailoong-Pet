@@ -12,17 +12,17 @@ struct OnboardingPageView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Spacer()
-                PillButton(title: "Skip", action: onSkip)
+                ButtonPillDefault(title: "Skip", action: onSkip)
             }
             .padding(.top, 20)
             
             VStack(alignment: .leading, spacing: 16) {
                 Text(title)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.title1Bold)
                     .foregroundColor(.black)
-                
+
                 Text(description)
-                    .font(.system(size: 14))
+                    .font(.subheadRegular)
                     .foregroundColor(.black.opacity(0.8))
                     .lineSpacing(4)
             }
@@ -59,7 +59,7 @@ struct OnboardingPageView: View {
                 if isLastPage {
                     Button(action: onNext) {
                         Text("Start")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.subheadBold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 48)
                             .padding(.vertical, 14)
@@ -69,7 +69,7 @@ struct OnboardingPageView: View {
                 } else {
                     Button(action: onNext) {
                         Text("Next")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.subheadBold)
                             .foregroundColor(.black)
                             .padding(.horizontal, 48)
                             .padding(.vertical, 14)

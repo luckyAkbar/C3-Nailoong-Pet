@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct FilledStateToolbar: View {
+//previously FilledStateToolbar
+struct NavigationTopBarFilled: View {
     var onBack: () -> Void = {}
     var onAdd: () -> Void = {}
 
@@ -16,7 +17,7 @@ struct FilledStateToolbar: View {
             HStack {
                 Button(action: onBack) {
                     AppIcon.back.image
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.calloutBold)
                 }
                 .buttonStyle(.glass)
 
@@ -44,6 +45,6 @@ struct FilledStateToolbar: View {
 }
 
 #Preview {
-    FilledStateToolbar()
+    NavigationTopBarFilled()
         .background(Color.beigeTertiaryBrand)
 }

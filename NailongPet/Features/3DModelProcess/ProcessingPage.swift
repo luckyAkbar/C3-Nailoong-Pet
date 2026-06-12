@@ -27,29 +27,31 @@ struct ProcessPage: View {
 
                 if progressPercentage < 100 {
                     // MARK: - Loading State
-                    Text("Preserving 3D model of your pet...")
-                        .foregroundColor(.whitePrimarySurface)
+                    Text("Preserving 3D model of your pet....")
+                        .foregroundStyle(Color.whitePrimarySurface)
                         .font(.title2Bold)
+                        .multilineTextAlignment(.center)
                     Text("Please don’t close the app while it’s working")
-                        .foregroundColor(.graySecondaryText)
+                        .foregroundStyle(Color.graySecondaryText)
+                        .font(.subheadRegular)
 
-                    Gauge(value: progressPercentage, in: 0...100) {
-                    } currentValueLabel: {
-                        Text("\(Int(progressPercentage))%")
-                            .foregroundColor(.whitePrimarySurface)
-                    }
+                    ProcessProgressBar(progress: Double(progressPercentage) / 100)
+                        .padding(.horizontal, 40)
+                        .padding(.top, 8)
                 } else {
                     // MARK: - Complete State
-                    Text("Preserving 3D model of your pet...")
-                        .foregroundColor(.whitePrimarySurface)
+                    Text("Pet Successfully Preserved!")
+                        .foregroundStyle(Color.whitePrimarySurface)
                         .font(.title2Bold)
                     Text("Your pet has been successfully preserved and ready to interact with")
-                        .foregroundColor(.graySecondaryText)
+                        .foregroundStyle(Color.graySecondaryText)
                         .multilineTextAlignment(.center)
-
-                    Button(action: { router.navigate(to: .processPetDetail) }) {
-                        BrandButton(text: "Next")
-                    }
+                    
+                    
+                    ButtonPrimaryDefault(
+                        text: "Next",
+                        action: { router.navigate(to: .processPetDetail) }
+                    )
                 }
             }
             .padding()
@@ -64,6 +66,32 @@ struct ProcessPage: View {
                     progressPercentage = min(progressPercentage + 2, 100)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Feedback/ProgressBar (Track + Fill) sesuai design spec
+private struct ProcessProgressBar: View {
+    var progress: Double
+
+    var body: some View {
+        VStack(spacing: 4) {
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.whitePrimarySurface.opacity(0.3))
+                        .frame(height: 6)
+                    Capsule()
+                        .fill(Color.orangePrimaryBrand)
+                        .frame(width: geometry.size.width * max(0, min(progress, 1)), height: 6)
+                }
+            }
+            .frame(height: 6)
+
+            Text("\(Int(progress * 100))%")
+                .font(.footnoteRegular)
+                .foregroundStyle(Color.whitePrimarySurface)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 }

@@ -17,7 +17,7 @@ struct Choose3DGeneratorTech: View {
                 HStack {
                     Button(action: { router.navigateBack() }) {
                         AppIcon.back.image
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.calloutBold)
                     }
                     .buttonStyle(.glass)
                     Spacer()
@@ -34,7 +34,7 @@ struct Choose3DGeneratorTech: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
                     Button(action: { router.navigate(to: .mlSharp) }) {
-                        MenuSelection(
+                        CardMenuSelectionDefault(
                             icon: .favoriteMoment,
                             title: "Pick a Favorite Moment",
                             subtitle: "If your pet isn't nearby, start with a photo."
@@ -43,7 +43,7 @@ struct Choose3DGeneratorTech: View {
                     .buttonStyle(.plain)
 
                     Button(action: { router.navigate(to: .lidar) }) {
-                        MenuSelection(
+                        CardMenuSelectionDefault(
                             icon: .scanCompanion,
                             title: "Scan Your Companion",
                             subtitle: "A quick scan with a LiDAR-enabled device can help bring them even closer."

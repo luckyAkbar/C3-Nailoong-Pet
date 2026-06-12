@@ -1,23 +1,24 @@
 import SwiftUI
 
-struct InteractionPopup: View {
+//previously InteractionPopup
+struct PopOverMenuTooltipAnchor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Interaction List")
-                .font(.system(size: 16, weight: .bold))
+                .font(.calloutBold)
                 .foregroundColor(.black)
                 .padding(.bottom, 8)
             
             VStack(spacing: 16) {
-                InteractionRowItem(
+                ListItemRowInteractionStyle(
                     iconName: AppIcon.handRaised,
                     description: "Try to pet your 3D pet with\nyour hand"
                 )
-                InteractionRowItem(
+                ListItemRowInteractionStyle(
                     iconName: AppIcon.handTap,
                     description: "Try to pet your pet trough\nyour phone"
                 )
-                InteractionRowItem(
+                ListItemRowInteractionStyle(
                     iconName: AppIcon.personWave,
                     description: "Try to call your pet to see it\nreaction"
                 )
@@ -34,6 +35,6 @@ struct InteractionPopup: View {
 #Preview {
     ZStack {
         Color.gray
-        InteractionPopup()
+        PopOverMenuTooltipAnchor()
     }
 }

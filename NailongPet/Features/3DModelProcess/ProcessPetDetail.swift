@@ -78,20 +78,19 @@ struct ProcessPetDetail: View {
                                 .lineLimit(4, reservesSpace: true)
                         }
                         .padding(15)
-                        .frame(maxWidth: .infinity, minHeight: 199, alignment: .leading)
+                        .frame(maxWidth: 362, minHeight: 199, alignment: .topLeading)
                         .background(Color.orangePrimaryBrand)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value))
                         .padding(.horizontal, 16)
 
-                        Spacer(minLength: 48)
+                        Spacer(minLength: 155)
 
                         // Setelah simpan → kembali ke Home (root)
                         Button(action: { router.navigateToRoot() }) {
                             Text("Save")
                                 .font(.subheadRegular)
                                 .foregroundStyle(isFormEmpty ? Color.blackPrimaryText : Color.whitePrimarySurface)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                                .frame(maxWidth: 184, minHeight: 55)
                                 .background(isFormEmpty ? Color.grayDisabledAction.opacity(0.4) : Color.orangePrimaryBrand)
                                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
                         }
@@ -99,7 +98,7 @@ struct ProcessPetDetail: View {
                         .padding(.horizontal, 40)
                         .padding(.bottom, 40)
                     }
-                    // minHeight = full screen → layout tetap centered saat keyboard tidak muncul
+ 
                     .frame(minWidth: geo.size.width, minHeight: geo.size.height)
                 }
                 .scrollDismissesKeyboard(.interactively)

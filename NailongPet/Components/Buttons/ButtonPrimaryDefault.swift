@@ -16,8 +16,7 @@ struct ButtonPrimaryDefault: View {
             Text(text)
                 .font(.subheadRegular)
                 .foregroundColor(.whitePrimarySurface)
-                .frame(maxWidth: .infinity)
-                .frame(height: 35)
+                .frame(maxWidth: 184, minHeight: 55)
         }
         .buttonStyle(.glassProminent)
         .tint(Color.orangePrimaryBrand)
@@ -27,5 +26,5 @@ struct ButtonPrimaryDefault: View {
 }
 
 #Preview {
-    ButtonPrimaryDefault(text: "Login")
+    ButtonPrimaryDefault(text: "Next")
 }

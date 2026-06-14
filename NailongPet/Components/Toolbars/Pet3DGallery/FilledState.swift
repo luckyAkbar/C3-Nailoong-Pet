@@ -22,9 +22,7 @@ struct FilledStateToolbar: View {
 
                 Spacer()
 
-                Button(action: {
-                    onAdd()
-                }, label: {
+                Button(action: onAdd, label: {
                     Text("Add")
                         .font(.subheadRegular)
                         .foregroundColor(.blackPrimaryText)

@@ -6,72 +6,46 @@ struct ARInteractionScreen: View {
     
     var body: some View {
         ZStack {
-            ARViewContainer()
-                .edgesIgnoringSafeArea(.all)
-            
-            VStack {
-                HStack(alignment: .top) {
-                    CircleBackButton {
-                        dismiss()
+                ARViewContainer()
+                    .edgesIgnoringSafeArea(.all)
+                
+                Spacer()
+                
+                VStack {
+                    switch viewModel.currentState {
+                    case .tutorialHand:
+                        InstructionGlassCard(
+                            instruction: "Move iPhone to start"
+                        ).padding(.top, 50)
+                    case .tutorialTap:
+                        InstructionGlassCard(
+                            instruction: "Move iPhone to start"
+                        )
+                    case .tutorialVoice:
+                        InstructionGlassCard(        instruction: "Move iPhone to start"
+                        )
+                    case .placing:
+                        PlacingOverlay()
+                    case .interacting:
+                        InteractingOverlay {
+                        }
                     }
                     
                     Spacer()
-                    
-                    if viewModel.currentState == .interacting || viewModel.currentState == .placing {
-                        GuideButton {
-                            withAnimation {
-                                viewModel.togglePopup()
-                            }
-                        }
-                        .overlay(alignment: .topTrailing) {
-                            if viewModel.showInteractionPopup {
-                                InteractionPopup()
-                                    .offset(x: -8, y: 60)
-                            }
-                        }
-                    } else {
-                        PillButton(title: "Next") {
-                            withAnimation {
-                                viewModel.nextState()
-                            }
-                        }
-                    }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                
-                Spacer()
-                
-                switch viewModel.currentState {
-                case .tutorialHand:
-                    InstructionGlassCard(
-                        iconName: AppIcon.handRaised,
-                        title: "Try to pet your 3D\npet with your hand",
-                        instruction: "Move iPhone to start"
-                    )
-                case .tutorialTap:
-                    InstructionGlassCard(
-                        iconName: AppIcon.handTap,
-                        title: "Try to pet your pet\ntrough your phone",
-                        instruction: "Move iPhone to start"
-                    )
-                case .tutorialVoice:
-                    InstructionGlassCard(
-                        iconName: AppIcon.personWave,
-                        title: "Try to call your\npet's name to see\nits reaction",
-                        instruction: "Move iPhone to start"
-                    )
-                case .placing:
-                    PlacingOverlay()
-                case .interacting:
-                    InteractingOverlay {
-                    }
-                }
-                
-                Spacer()
             }
-        }
-        .toolbar(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(Color.textPrimary)
+                    }
+                }
+            }
+            .navigationBarBackButtonHidden(true)
     }
 }
 

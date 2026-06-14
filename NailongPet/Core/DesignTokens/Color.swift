@@ -29,30 +29,29 @@ extension Color {
 
 
 extension Color {
-    
-   
-    
     // MARK: - Brand Colors
-    static let brandPrimary   = Color(hex: 0xC9865A)
-    static let brandSecondary = Color(hex: 0x8D7966)
+    static let brandPrimary   = Color(hex: 0x6A6151)
+    static let brandSecondary = Color(hex: 0xE8E8E8)
     static let brandTertiary  = Color(hex: 0xE2DEDB)
 
     
-    
-    
     // MARK: - Text Colors
     static let textPrimary   = Color(light: 0x000000, dark: 0xFFFFFF)
-    static let textSecondary = Color(light: 0x8E8E93, dark: 0x8E8E93)
+    static let textSecondary = Color(light: 0x615848, dark: 0x615848)
+    static let textTertiary  = Color(light: 0x8E8E93, dark: 0x8E8E93)
+
 
     // MARK: - Surface Colors
     static let surfacePrimary   = Color(light: 0xFFFFFF, dark: 0x1C1C1E)
     static let surfaceSecondary = Color(light: 0x000000, dark: 0xFFFFFF)
     static let surfaceCanvas    = Color(light: 0xE2DEDB, dark: 0x000000)
     static let surfaceCard      = Color(light: 0x8D7966, dark: 0x2C2C2E)
+    static let surfacePetItem   = Color(light: 0xE8E8E8, dark: 0xE8E8E8)
 
     // MARK: - Fixed Content Colors
     static let onBrand = Color.white
     static let scrim   = Color.black
+    static let avatarPetItem   = Color(light: 0x767676, dark: 0x767676)
 
     // MARK: - Action Colors
     static let actionDefault  = Color(hex: 0x007AFF)

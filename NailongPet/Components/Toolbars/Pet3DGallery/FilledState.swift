@@ -22,7 +22,7 @@ struct FilledStateToolbar: View {
 
                 Spacer()
 
-                Button(action: onAdd) {
+                Button(action: onAdd, label: {
                     Text("Add")
                         .font(.subheadRegular)
                         .foregroundColor(.blackPrimaryText)
@@ -31,7 +31,7 @@ struct FilledStateToolbar: View {
                         .background(Color.whitePrimarySurface)
                         .cornerRadius(CornerRadius.full.value)
                         .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
-                }
+                })
             }
 
             Text("Your Pets")
@@ -45,5 +45,5 @@ struct FilledStateToolbar: View {
 
 #Preview {
     FilledStateToolbar()
-        .background(Color.beigeTertiaryBrand)
+        .background(Color.brandTertiary)
 }

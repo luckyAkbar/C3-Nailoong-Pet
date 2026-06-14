@@ -86,7 +86,7 @@ struct EditPetProfileModal: View {
                         text: $petDescription,
                         axis: .vertical
                     )
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Color.whitePrimarySurface)
                     .multilineTextAlignment(.leading)
                     
                     
@@ -109,7 +109,7 @@ struct EditPetProfileModal: View {
                     }) {
                         Image(systemName: "xmark")
                             .font(.body.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.blackPrimaryText)
                     }
                 }
                 
@@ -120,7 +120,7 @@ struct EditPetProfileModal: View {
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.blackPrimaryText)
                     }
                 }
             }

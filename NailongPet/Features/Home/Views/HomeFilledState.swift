@@ -34,7 +34,7 @@ struct HomeFilledState: View {
 
                 Button(action: onInteract) {
                     Text("Interact")
-                        .font(.subheadBold)
+                        .font(.subheadRegular)
                         .padding(.horizontal, 32)
                         .foregroundStyle(Color.onBrand)
                         .frame(height: 44)

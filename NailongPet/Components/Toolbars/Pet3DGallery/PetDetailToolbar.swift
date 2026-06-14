@@ -35,7 +35,7 @@ struct PetDetailToolbar: View {
 
             Text("Pet")
                 .font(.title2Bold)
-                .foregroundColor(.blackPrimaryText)
+                .foregroundColor(.textPrimary)
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -63,7 +63,7 @@ struct EditPetProfileModal: View {
                     )
                     
                         .multilineTextAlignment(.leading)
-                        .foregroundStyle(Color.brownSecondaryBrand)
+                        .foregroundStyle(Color.brandSecondary)
                     Spacer()
                 }
                 .frame(width: 362, height: 44)
@@ -71,7 +71,7 @@ struct EditPetProfileModal: View {
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .frame(height: 1)
-                        .foregroundStyle(Color.brownSecondaryBrand)
+                        .foregroundStyle(Color.brandSecondary)
                 }
                 .padding(.top, 15)
                 
@@ -94,7 +94,7 @@ struct EditPetProfileModal: View {
                 }
                 .padding(15)
                 .frame(width: 362, height: 199, alignment: .leading)
-                .background(Color.orangePrimaryBrand)
+                .background(Color.brandPrimary)
                 .cornerRadius(26)
                 .padding(.top, 20)
                 
@@ -130,5 +130,5 @@ struct EditPetProfileModal: View {
 
 #Preview {
     PetDetailToolbar()
-        .background(Color.beigeTertiaryBrand)
+        .background(Color.brandTertiary)
 }

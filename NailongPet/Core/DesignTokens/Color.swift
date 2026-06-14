@@ -6,12 +6,40 @@
 import SwiftUI
 import UIKit
 
+@available(*, deprecated, message: "Warna ini sudah deprecated (tidak digunakan). Harap gunakan warna dari sistem desain terbaru.")
 extension Color {
+    // Brand Colors
+    @available(*, deprecated) static let orangePrimaryBrand = Color(hex: 0xC9865A)
+    @available(*, deprecated) static let brownSecondaryBrand = Color(hex: 0x8D7966)
+    @available(*, deprecated) static let beigeTertiaryBrand = Color(hex: 0xE2DEDB)
+    
+    // Text Colors
+    @available(*, deprecated) static let blackPrimaryText = Color(hex: 0x000000)
+    @available(*, deprecated) static let graySecondaryText = Color(hex: 0x8E8E93)
+    
+    // Surface Colors
+    @available(*, deprecated) static let whitePrimarySurface = Color(hex: 0xFFFFFF)
+    @available(*, deprecated) static let blackSecondarySurface = Color(hex: 0x000000)
+    
+    // MARK: - Action & Utility Colors
+    @available(*, deprecated) static let blueDefaultAction = Color(hex: 0x007AFF)   // Label fully rounded / tips
+    @available(*, deprecated) static let greenSucceedAction = Color(hex: 0x34C759)   // Button ARAction Succeed
+    @available(*, deprecated) static let grayDisabledAction = Color(hex: 0x8E8E93)   // Button ARAction Disabled
+}
+
+
+extension Color {
+    
+   
+    
     // MARK: - Brand Colors
     static let brandPrimary   = Color(hex: 0xC9865A)
     static let brandSecondary = Color(hex: 0x8D7966)
     static let brandTertiary  = Color(hex: 0xE2DEDB)
 
+    
+    
+    
     // MARK: - Text Colors
     static let textPrimary   = Color(light: 0x000000, dark: 0xFFFFFF)
     static let textSecondary = Color(light: 0x8E8E93, dark: 0x8E8E93)

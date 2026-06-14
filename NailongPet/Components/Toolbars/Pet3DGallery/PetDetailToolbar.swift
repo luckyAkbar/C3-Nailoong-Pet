@@ -35,7 +35,7 @@ struct PetDetailToolbar: View {
 
             Text("Pet")
                 .font(.title2Bold)
-                .foregroundColor(.textPrimary)
+                .foregroundColor(.blackPrimaryText)
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -63,7 +63,7 @@ struct EditPetProfileModal: View {
                     )
                     
                         .multilineTextAlignment(.leading)
-                        .foregroundStyle(Color.brandSecondary)
+                        .foregroundStyle(Color.brownSecondaryBrand)
                     Spacer()
                 }
                 .frame(width: 362, height: 44)
@@ -71,7 +71,7 @@ struct EditPetProfileModal: View {
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .frame(height: 1)
-                        .foregroundStyle(Color.brandSecondary)
+                        .foregroundStyle(Color.brownSecondaryBrand)
                 }
                 .padding(.top, 15)
                 
@@ -86,7 +86,7 @@ struct EditPetProfileModal: View {
                         text: $petDescription,
                         axis: .vertical
                     )
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(Color.whitePrimarySurface)
                     .multilineTextAlignment(.leading)
                     
                     
@@ -94,7 +94,7 @@ struct EditPetProfileModal: View {
                 }
                 .padding(15)
                 .frame(width: 362, height: 199, alignment: .leading)
-                .background(Color.brandPrimary)
+                .background(Color.orangePrimaryBrand)
                 .cornerRadius(26)
                 .padding(.top, 20)
                 
@@ -109,7 +109,7 @@ struct EditPetProfileModal: View {
                     }) {
                         Image(systemName: "xmark")
                             .font(.body.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.blackPrimaryText)
                     }
                 }
                 
@@ -120,7 +120,7 @@ struct EditPetProfileModal: View {
                     }) {
                         Image(systemName: "checkmark")
                             .font(.body.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.blackPrimaryText)
                     }
                 }
             }
@@ -130,5 +130,5 @@ struct EditPetProfileModal: View {
 
 #Preview {
     PetDetailToolbar()
-        .background(Color.brandTertiary)
+        .background(Color.beigeTertiaryBrand)
 }

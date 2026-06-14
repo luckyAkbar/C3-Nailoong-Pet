@@ -27,10 +27,10 @@ struct FilledStateToolbar: View {
                 }, label: {
                     Text("Add")
                         .font(.subheadRegular)
-                        .foregroundColor(.textPrimary)
+                        .foregroundColor(.blackPrimaryText)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color.surfacePrimary)
+                        .background(Color.whitePrimarySurface)
                         .cornerRadius(CornerRadius.full.value)
                         .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
                 })
@@ -38,7 +38,7 @@ struct FilledStateToolbar: View {
 
             Text("Your Pets")
                 .font(.title2Bold)
-                .foregroundColor(.textPrimary)
+                .foregroundColor(.blackPrimaryText)
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)

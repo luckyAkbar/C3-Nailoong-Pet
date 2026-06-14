@@ -12,6 +12,8 @@ enum AppIcon: String {
     // MARK: - Button Actions
     case add = "plus"
     case edit = "pencil"
+    case delete = "trash"
+    case more = "ellipsis"
     case close = "xmark"
     case check = "checkmark"
     case back = "chevron.left"

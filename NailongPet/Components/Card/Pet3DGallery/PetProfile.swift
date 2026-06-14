@@ -11,11 +11,13 @@ struct Pet3DProfile: Identifiable, Equatable, Hashable {
     let id: UUID
     let name: String
     let imageName: String
+    let petDescription: String
 
-    init(id: UUID = UUID(), name: String, imageName: String) {
+    init(id: UUID = UUID(), name: String, imageName: String, petDescription: String = "") {
         self.id = id
         self.name = name
         self.imageName = imageName
+        self.petDescription = petDescription
     }
 }
 

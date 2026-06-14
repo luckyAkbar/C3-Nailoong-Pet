@@ -2,50 +2,76 @@
 //  Home.swift
 //  NailongPet
 //
-//  Created by Lucky Akbar on 05/06/26.
+//  Hub utama aplikasi. Menggantikan Pet3DGallery sebagai layar pet.
+//  - Empty State: belum ada pet → ajakan membuat pet pertama.
+//  - Filled State: ada pet → hero pet aktif + carousel + Interact.
 //
 
 import SwiftUI
 
 struct Home: View {
     @EnvironmentObject private var router: AppRouter
+    @StateObject private var viewModel = HomeViewModel()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Nailong Pet")
-                .font(Font.title1Bold)
-                .foregroundColor(.blackPrimaryText)
-                .multilineTextAlignment(.leading)
-                .padding(.top, 25)
+        VStack(spacing: 0) {
+            HomeTopBar(
+                showMenu: !viewModel.isEmpty,
+                onEdit: {
+                    if let pet = viewModel.selectedPet {
+                        router.navigate(to: .petDetail(pet))
+                    }
+                },
+                onDelete: {
+                    if let pet = viewModel.selectedPet {
+                        viewModel.delete(pet)
+                    }
+                },
+                onAdd: {
+                    // TODO: wiring tombol "+" menyusul.
+                }
+            )
 
-            Button(action: { router.navigate(to: .choose3DGeneratorTech) }) {
-                MenuSelection(
-                    icon: .bringTo3D,
-                    title: "Bring Pet to 3D",
-                    subtitle: "Preserve the moment with your pet"
+            if viewModel.isEmpty {
+                HomeEmptyState(
+                    onCreate: { router.navigate(to: .choose3DGeneratorTech) }
                 )
-            }
-            .buttonStyle(.plain)
-
-            Button(action: { router.navigate(to: .pet3DGallery) }) {
-                MenuSelection(
-                    icon: .interact,
-                    title: "Interact",
-                    subtitle: "Feel the presence of your 3D companion"
+            } else {
+                HomeFilledState(
+                    pets: viewModel.pets,
+                    selected: viewModel.selectedPet,
+                    onSelect: { viewModel.select($0) },
+                    onInteract: { router.navigate(to: .arInteraction) }
                 )
+                .padding(.top, 16)
             }
-            .buttonStyle(.plain)
-
-            Spacer()
         }
-        .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.beigeTertiaryBrand.ignoresSafeArea())
+        .background(Color.surfaceCanvas.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isEmpty)
     }
 }
 
-#Preview {
+#Preview("Filled") {
     Home()
         .environmentObject(AppRouter())
+}
+
+#Preview("Empty") {
+    Home(viewModel: HomeViewModel(pets: []))
+        .environmentObject(AppRouter())
+}
+
+#Preview("Filled - Dark") {
+    Home()
+        .environmentObject(AppRouter())
+        .environment(\.colorScheme, .dark)
+}
+
+private extension Home {
+    /// Init pembantu khusus preview agar bisa menyuntik view model.
+    init(viewModel: HomeViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 }

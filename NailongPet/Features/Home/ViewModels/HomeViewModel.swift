@@ -20,14 +20,17 @@ final class HomeViewModel: ObservableObject {
     }
 
     static let samplePets: [Pet3DProfile] = [
-        Pet3DProfile(
-            name: "Buncit",
-            imageName: AppIcon.moli.rawValue,
-            petDescription: "Buncit was a cheerful orange cat who loved to nap in the sun, until he had to leave too soon after an accident.",
-            modelFileName: "buncit.usdz"
-        ),
-        Pet3DProfile(name: "Moli", imageName: AppIcon.moli.rawValue),
-        Pet3DProfile(name: "Oyen", imageName: AppIcon.moli.rawValue),
-        Pet3DProfile(name: "Mochi", imageName: AppIcon.moli.rawValue)
+        // MARK: - Uncomment this to enable the sample pet for Buncit
+//        Pet3DProfile(
+//             name: "Buncit",
+//             imageName: AppIcon.moli.rawValue,
+//             petDescription: "Buncit was a cheerful orange cat who loved to nap in the sun, until he had to leave too soon after an accident.",
+//             modelFileName: "buncit.usdz"
+//        ),
+//        Pet3DProfile(name: "Moli", imageName: AppIcon.moli.rawValue),
+//        Pet3DProfile(name: "Oyen", imageName: AppIcon.moli.rawValue),
+//        Pet3DProfile(name: "Mochi", imageName: AppIcon.moli.rawValue)
+
+        
     ]
 }

@@ -11,35 +11,39 @@ import SwiftUI
 
 struct Home: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var petStore: PetStore
     @StateObject private var viewModel = HomeViewModel()
+
+    private var pets: [Pet3DProfile] { petStore.pets }
+    private var selected: Pet3DProfile? { viewModel.selectedPet(from: pets) }
 
     var body: some View {
         VStack(spacing: 0) {
             HomeTopBar(
-                showMenu: !viewModel.isEmpty,
+                showMenu: !pets.isEmpty,
                 onEdit: {
-                    if let pet = viewModel.selectedPet {
-                        router.navigate(to: .petDetail(pet))
+                    if let selected {
+                        router.navigate(to: .petDetail(selected))
                     }
                 },
                 onDelete: {
-                    if let pet = viewModel.selectedPet {
-                        viewModel.delete(pet)
+                    if let selected {
+                        petStore.delete(selected)
                     }
                 },
                 onAdd: {
-                    // TODO: wiring tombol "+" menyusul.
+                    router.navigate(to: .choose3DGeneratorTech)
                 }
             )
 
-            if viewModel.isEmpty {
+            if pets.isEmpty {
                 HomeEmptyState(
                     onCreate: { router.navigate(to: .choose3DGeneratorTech) }
                 )
             } else {
                 HomeFilledState(
-                    pets: viewModel.pets,
-                    selected: viewModel.selectedPet,
+                    pets: pets,
+                    selected: selected,
                     onSelect: { viewModel.select($0) },
                     onInteract: { router.navigate(to: .arInteraction) }
                 )
@@ -49,29 +53,25 @@ struct Home: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.surfaceCanvas.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .animation(.easeInOut(duration: 0.25), value: viewModel.isEmpty)
+        .animation(.easeInOut(duration: 0.25), value: pets.isEmpty)
     }
 }
 
 #Preview("Filled") {
     Home()
         .environmentObject(AppRouter())
+        .environmentObject(PetStore.preview(HomeViewModel.samplePets))
 }
 
 #Preview("Empty") {
-    Home(viewModel: HomeViewModel(pets: []))
+    Home()
         .environmentObject(AppRouter())
+        .environmentObject(PetStore.preview([]))
 }
 
 #Preview("Filled - Dark") {
     Home()
         .environmentObject(AppRouter())
+        .environmentObject(PetStore.preview(HomeViewModel.samplePets))
         .environment(\.colorScheme, .dark)
-}
-
-private extension Home {
-    /// Init pembantu khusus preview agar bisa menyuntik view model.
-    init(viewModel: HomeViewModel) {
-        _viewModel = StateObject(wrappedValue: viewModel)
-    }
 }

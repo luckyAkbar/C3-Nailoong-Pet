@@ -87,10 +87,7 @@ private struct PetAvatarItem: View {
     private let avatarBg = Color(red: 220/255, green: 220/255, blue: 220/255)
 
     var body: some View {
-        Image(pet.imageName)
-            .resizable()
-            .scaledToFit()
-            .padding(15)
+        avatarContent
             .frame(width: 100, height: 100)
             .background(avatarBg)
             .clipShape(Circle())
@@ -103,6 +100,19 @@ private struct PetAvatarItem: View {
             )
             .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: 2)
             .scaleEffect(isSelected ? 1.0 : 0.74)
+    }
+
+    @ViewBuilder
+    private var avatarContent: some View {
+        if let url = pet.modelURL {
+            Pet3DModelView(url: url, allowsCameraControl: false)
+                .padding(8)
+        } else {
+            Image(pet.imageName)
+                .resizable()
+                .scaledToFit()
+                .padding(15)
+        }
     }
 }
 

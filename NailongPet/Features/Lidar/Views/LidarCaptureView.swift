@@ -6,105 +6,131 @@
 //
 
 import SwiftUI
+import RealityKit
 
 // MARK: - Screen Container
 
 struct LidarCaptureView: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var manager: LidarCaptureManager
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingInstructionSheet: Bool = true
-    @State private var captureState: LidarCaptureState = .idle
-    @State private var captureCount: Int = 0
 
-    // Tombol Finish aktif setelah minimal 20 foto
-    private var canFinish: Bool { captureCount >= 20 }
-
-    // Pesan instruksi berubah mengikuti kondisi
-    private var instructionMessage: String {
-        switch captureState {
-        case .idle:
-            return "Point your camera at your pet,\nthen tap record to begin"
-        case .recording:
-            if captureCount < 20 { return "Move slowly around your pet" }
-            else { return "Great! Tap Finish when you're ready" }
-        }
-    }
+    private let minimumShots = 15
 
     var body: some View {
-        LidarCaptureContent(
-            state: captureState,
-            instructionMessage: instructionMessage,
-            captureCount: captureCount,
-            canFinish: canFinish,
-            onClose: { dismiss() },
-            onTips: { isShowingInstructionSheet = true },
-            onFinish: { router.navigate(to: .processPage) },
-            onShutter: {
-                // Tap shutter → mulai recording
-                withAnimation { captureState = .recording }
-            },
-            onRecordPause: {
-                // Tap pause → kembali idle, reset count
-                withAnimation { captureState = .idle }
-                captureCount = 0
+        ZStack {
+            if ObjectCaptureSession.isSupported {
+                captureContent
+            } else {
+                UnsupportedDeviceView(onClose: closeView)
             }
-        )
+        }
         .sheet(isPresented: $isShowingInstructionSheet) {
             LidarPreservedInstructionSheet()
                 .presentationDetents([.fraction(0.85)])
                 .presentationDragIndicator(.visible)
         }
         .toolbar(.hidden, for: .navigationBar)
-        // Simulasi auto-capture saat recording — dibatalkan otomatis saat state berubah
-        .task(id: captureState) {
-            guard captureState == .recording else { return }
-            while captureState == .recording && captureCount < 100 {
-                try? await Task.sleep(for: .milliseconds(150))
-                withAnimation {
-                    captureCount = min(captureCount + 1, 100)
-                }
+        .preferredColorScheme(.dark)
+        .onChange(of: isShowingInstructionSheet) { _, showing in
+            guard !showing else { return }
+            if manager.session == nil, case .notStarted = manager.state {
+                manager.startSession()
             }
         }
     }
-}
 
-// MARK: - Screen Content (presentational)
+    @ViewBuilder
+    private var captureContent: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .top) {
+                if let session = manager.session {
+                    ObjectCaptureView(session: session)
+                } else {
+                    Color.black
+                }
 
-struct LidarCaptureContent: View {
-    var state: LidarCaptureState = .idle
-    var instructionMessage: String = ""
-    var captureCount: Int = 0
-    var canFinish: Bool = false
-    var thumbnailImageName: String? = "Moli"
-    var onClose: () -> Void = {}
-    var onTips: () -> Void = {}
-    var onFinish: () -> Void = {}
-    var onShutter: () -> Void = {}
-    var onRecordPause: () -> Void = {}
+                CaptureTopBar(onClose: closeView, onTips: { isShowingInstructionSheet = true })
 
-    var body: some View {
-        ZStack {
-            CameraPreviewPlaceholder()
-                .ignoresSafeArea()
+                if let session = manager.session {
+                    VStack {
+                        Spacer()
+                        InstructionBubble(message: instructionMessage(for: session))
+                            .padding(.bottom, 16)
+                    }
+                }
+            }
+            .ignoresSafeArea(edges: .top)
 
-            VStack {
-                CaptureTopBar(onClose: onClose, onTips: onTips)
-
-                Spacer()
-
-                InstructionBubble(message: instructionMessage)
-                    .padding(.bottom, 24)
-
+            if let session = manager.session {
                 ControlPanel(
-                    state: state,
-                    captureCount: captureCount,
-                    canFinish: canFinish,
-                    thumbnailImageName: thumbnailImageName,
-                    onFinish: onFinish,
-                    onShutter: onShutter,
-                    onRecordPause: onRecordPause
+                    isRecording: session.state == .capturing,
+                    isPaused: manager.isPaused,
+                    captureCount: manager.numberOfShots,
+                    canFinish: manager.numberOfShots >= minimumShots,
+                    thumbnail: manager.latestThumbnail,
+                    onFinish: finish,
+                    onShutter: { startCapturing(session) },
+                    onTogglePause: togglePause
                 )
             }
+        }
+        .background(Color.black.ignoresSafeArea())
+    }
+
+    // MARK: - Actions
+
+    private func startCapturing(_ session: ObjectCaptureSession) {
+        session.startCapturing()
+    }
+
+    private func togglePause() {
+        if manager.isPaused {
+            manager.resumeScanning()
+        } else {
+            manager.pauseScanning()
+        }
+    }
+
+    private func finish() {
+        manager.finishCaptureAndReconstruct()
+        router.navigate(to: .processPage)
+    }
+
+    private func closeView() {
+        manager.reset()
+        dismiss()
+    }
+
+    // MARK: - Instruction Text
+
+    private func instructionMessage(for session: ObjectCaptureSession) -> String {
+        switch session.state {
+        case .initializing:
+            return "Preparing camera sensors…"
+        case .ready:
+            return "Point your camera at your pet,\nthen tap record to begin"
+        case .detecting:
+            return "Aim at your pet, then tap record"
+        case .capturing:
+            if manager.isPaused { return "Paused. Tap play to continue" }
+            if let feedback = session.feedback.first { return message(for: feedback) }
+            if manager.numberOfShots < minimumShots { return "Move slowly around your pet" }
+            return "Great! Tap Finish when you're ready"
+        default:
+            return ""
+        }
+    }
+
+    private func message(for feedback: ObjectCaptureSession.Feedback) -> String {
+        switch feedback {
+        case .objectTooFar:        return "Move closer to your pet"
+        case .objectTooClose:      return "Move back a little"
+        case .movingTooFast:       return "Slow down your movement"
+        case .environmentTooDark:  return "Too dark — add more light"
+        case .outOfFieldOfView:    return "Keep your pet centered"
+        default:                   return "Move slowly around your pet"
         }
     }
 }
@@ -142,35 +168,15 @@ private struct InstructionBubble: View {
     }
 }
 
-private struct CameraPreviewPlaceholder: View {
-    var body: some View {
-        ZStack {
-            Color.graySecondaryText
-
-            VStack(spacing: 16) {
-                RoundedRectangle(cornerRadius: CornerRadius.medium.value)
-                    .strokeBorder(
-                        Color.whitePrimarySurface.opacity(0.6),
-                        style: StrokeStyle(lineWidth: 2, dash: [6, 6])
-                    )
-                    .frame(width: 170, height: 120)
-
-                Text("Move iPhone to start")
-                    .font(.subheadRegular)
-                    .foregroundColor(.whitePrimarySurface.opacity(0.85))
-            }
-        }
-    }
-}
-
 private struct ControlPanel: View {
-    var state: LidarCaptureState = .idle
+    var isRecording: Bool = false
+    var isPaused: Bool = false
     var captureCount: Int = 0
     var canFinish: Bool = false
-    var thumbnailImageName: String? = nil
+    var thumbnail: UIImage? = nil
     var onFinish: () -> Void = {}
     var onShutter: () -> Void = {}
-    var onRecordPause: () -> Void = {}
+    var onTogglePause: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 24) {
@@ -179,19 +185,20 @@ private struct ControlPanel: View {
 
                 Spacer()
 
-                switch state {
-                case .idle:      ShutterButton(action: onShutter)
-                case .recording: RecordPauseButton(action: onRecordPause)
+                if isRecording {
+                    RecordPauseButton(isPaused: isPaused, action: onTogglePause)
+                } else {
+                    ShutterButton(action: onShutter)
                 }
 
                 Spacer()
 
-                CaptureThumbnail(imageName: state == .recording ? thumbnailImageName : nil)
+                CaptureThumbnail(image: isRecording ? thumbnail : nil)
                     .frame(width: 85, alignment: .trailing)
             }
             .padding(.horizontal, 24)
 
-            if state == .recording {
+            if isRecording {
                 ScanProgressSlider(captureCount: captureCount)
                     .padding(.horizontal, 24)
             }
@@ -241,25 +248,31 @@ private struct ShutterButton: View {
 }
 
 private struct RecordPauseButton: View {
+    var isPaused: Bool = false
     var action: () -> Void = {}
 
     var body: some View {
         Button(action: action) {
-            AppIcon.recordingPause.image
-                .font(.system(size: 72, weight: .thin))
-                .foregroundColor(.whitePrimarySurface)
+            ZStack {
+                Circle()
+                    .fill(Color.whitePrimarySurface)
+                    .frame(width: 72, height: 72)
+                Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundColor(.blackPrimaryText)
+            }
         }
         .contentShape(Circle())
     }
 }
 
 private struct CaptureThumbnail: View {
-    var imageName: String?
+    var image: UIImage?
 
     var body: some View {
         Group {
-            if let name = imageName {
-                Image(name)
+            if let image {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 48, height: 48)
@@ -278,7 +291,7 @@ private struct CaptureThumbnail: View {
 private struct ScanProgressSlider: View {
     var captureCount: Int = 0
 
-    private let minCount = 20
+    private let minCount = 15
     private let maxCount = 100
 
     private var progress: Double {
@@ -319,40 +332,33 @@ private struct ScanProgressSlider: View {
     }
 }
 
-// MARK: - Previews
+private struct UnsupportedDeviceView: View {
+    var onClose: () -> Void = {}
 
-#Preview("Screen + Sheet") {
-    LidarCaptureView()
-}
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-#Preview("Idle") {
-    LidarCaptureContent(
-        state: .idle,
-        instructionMessage: "Point your camera at your pet,\nthen tap record to begin"
-    )
-}
+            VStack(spacing: 20) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(.whitePrimarySurface.opacity(0.85))
 
-#Preview("Need more light") {
-    LidarCaptureContent(
-        state: .recording,
-        instructionMessage: "Need more light",
-        captureCount: 12
-    )
-}
+                Text("This device doesn't support 3D object capture.")
+                    .font(.subheadRegular)
+                    .foregroundColor(.whitePrimarySurface)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
 
-#Preview("Recording") {
-    LidarCaptureContent(
-        state: .recording,
-        instructionMessage: "Move slowly around your pet",
-        captureCount: 45
-    )
-}
-
-#Preview("Recording • Finish Enabled") {
-    LidarCaptureContent(
-        state: .recording,
-        instructionMessage: "A bit slower …",
-        captureCount: 85,
-        canFinish: true
-    )
+                Button(action: onClose) {
+                    Text("Back")
+                        .font(.subheadRegular)
+                        .foregroundColor(.whitePrimarySurface)
+                        .frame(width: 160, height: 50)
+                        .background(Color.orangePrimaryBrand)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
+                }
+            }
+        }
+    }
 }

@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ProcessPetDetail: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var manager: LidarCaptureManager
+    @EnvironmentObject private var petStore: PetStore
 
     @State private var petName: String = ""
     @State private var petDescription: String = ""
@@ -22,6 +24,16 @@ struct ProcessPetDetail: View {
         name: "Moli",
         imageName: AppIcon.moli.rawValue
     )
+
+    private func savePet() {
+        petStore.add(
+            name: petName.trimmingCharacters(in: .whitespaces),
+            petDescription: petDescription.trimmingCharacters(in: .whitespaces),
+            modelFileName: manager.modelURL.lastPathComponent
+        )
+        manager.reset()
+        router.navigateToRoot()
+    }
 
     var body: some View {
         VStack {
@@ -70,8 +82,7 @@ struct ProcessPetDetail: View {
             Spacer()
             Spacer()
 
-            // Setelah simpan → ke Pet3DGallery
-            Button(action: { router.navigate(to: .pet3DGallery) }) {
+            Button(action: savePet) {
                 Text("Done")
                     .font(.subheadRegular)
                     .foregroundColor(isFormEmpty ? .blackPrimaryText : .whitePrimarySurface)
@@ -99,4 +110,6 @@ struct ProcessPetDetail: View {
 #Preview {
     ProcessPetDetail()
         .environmentObject(AppRouter())
+        .environmentObject(LidarCaptureManager())
+        .environmentObject(PetStore())
 }

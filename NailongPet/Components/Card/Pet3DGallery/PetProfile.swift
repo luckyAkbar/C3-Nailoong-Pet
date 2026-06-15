@@ -7,17 +7,33 @@
 
 import SwiftUI
 
-struct Pet3DProfile: Identifiable, Equatable, Hashable {
+struct Pet3DProfile: Identifiable, Equatable, Hashable, Codable {
     let id: UUID
     let name: String
     let imageName: String
     let petDescription: String
+    let modelFileName: String?
+    let createdAt: Date
 
-    init(id: UUID = UUID(), name: String, imageName: String, petDescription: String = "") {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        imageName: String = "",
+        petDescription: String = "",
+        modelFileName: String? = nil,
+        createdAt: Date = Date()
+    ) {
         self.id = id
         self.name = name
         self.imageName = imageName
         self.petDescription = petDescription
+        self.modelFileName = modelFileName
+        self.createdAt = createdAt
+    }
+
+    var modelURL: URL? {
+        guard let modelFileName else { return nil }
+        return ScannedModelLibrary.modelURL(for: modelFileName)
     }
 }
 

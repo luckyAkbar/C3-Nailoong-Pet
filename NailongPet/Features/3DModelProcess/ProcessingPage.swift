@@ -2,27 +2,33 @@ import SwiftUI
 
 struct ProcessPage: View {
     @EnvironmentObject private var router: AppRouter
-    @State private var progressPercentage: Float = 0
+    @EnvironmentObject private var manager: LidarCaptureManager
+
+    private var progressPercentage: Float { manager.reconstructionProgress * 100 }
+
+    private var failureMessage: String? {
+        if case .failed(let error) = manager.state { return error.localizedDescription }
+        return nil
+    }
+
+    private var isCompleted: Bool {
+        if case .completed = manager.state { return true }
+        return false
+    }
 
     var body: some View {
         ZStack {
             Color(hex: 0x3A3A3C).ignoresSafeArea()
 
-            if progressPercentage < 100 {
-                processingContent
-            } else {
+            if let failureMessage {
+                failureContent(message: failureMessage)
+            } else if isCompleted {
                 successContent
+            } else {
+                processingContent
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .task {
-            while progressPercentage < 100 {
-                try? await Task.sleep(for: .milliseconds(50))
-                withAnimation(.linear(duration: 0.05)) {
-                    progressPercentage = min(progressPercentage + 2, 100)
-                }
-            }
-        }
     }
 
     private var processingContent: some View {
@@ -136,6 +142,46 @@ struct ProcessPage: View {
             Spacer()
         }
     }
+
+    private func failureContent(message: String) -> some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            Image(systemName: "exclamationmark.triangle.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .foregroundStyle(.white.opacity(0.85))
+
+            VStack(spacing: 8) {
+                Text("Couldn't create the 3D model")
+                    .font(.title2Bold)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                Text(message)
+                    .font(.subheadRegular)
+                    .foregroundStyle(Color.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button(action: {
+                manager.reset()
+                router.navigateToRoot()
+            }) {
+                Text("Back to Home")
+                    .font(.subheadRegular)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: 184, minHeight: 55)
+                    .background(Color.scrim)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 40)
+            }
+
+            Spacer()
+        }
+    }
 }
 
 struct ScanFrame: Shape {
@@ -188,9 +234,5 @@ struct ScanFrame: Shape {
 #Preview("Processing") {
     ProcessPage()
         .environmentObject(AppRouter())
-}
-
-#Preview("Success") {
-    ProcessPage()
-        .environmentObject(AppRouter())
+        .environmentObject(LidarCaptureManager())
 }

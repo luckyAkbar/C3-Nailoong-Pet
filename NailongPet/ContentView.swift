@@ -16,6 +16,8 @@ struct ContentView: View {
 
     /// Router dibuat di sini (root) lalu disebarkan ke seluruh view via environmentObject.
     @StateObject private var router = AppRouter()
+    @StateObject private var captureManager = LidarCaptureManager()
+    @StateObject private var petStore = PetStore()
 
     var body: some View {
         if hasCompletedOnboarding {
@@ -43,6 +45,8 @@ struct ContentView: View {
                     }
             }
             .environmentObject(router)
+            .environmentObject(captureManager)
+            .environmentObject(petStore)
         } else {
             OnboardingScreen(onFinish: {
                 hasCompletedOnboarding = true

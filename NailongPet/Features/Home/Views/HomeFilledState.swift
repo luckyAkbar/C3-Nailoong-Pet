@@ -27,10 +27,14 @@ struct HomeFilledState: View {
             }
 
             ZStack(alignment: .bottom) {
-                // TODO: Ganti dengan Model3D("buncit.usdz") saat aset 3D siap.
-                PetSilhouetteView(imageName: "FilledSilhouette")
-                    .frame(maxWidth: 572, alignment: .trailing)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
+                if let url = selected?.modelURL {
+                    Pet3DModelView(url: url)
+                        .frame(maxWidth: 572, maxHeight: .infinity, alignment: .bottom)
+                } else {
+                    PetSilhouetteView(imageName: "FilledSilhouette")
+                        .frame(maxWidth: 572, alignment: .trailing)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+                }
 
                 Button(action: onInteract) {
                     Text("Interact")

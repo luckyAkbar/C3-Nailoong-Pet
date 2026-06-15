@@ -26,7 +26,10 @@ struct Pet3DGalleryScreen: View {
             onBack: { router.navigateToRoot() },
             onAdd: { router.navigate(to: .choose3DGeneratorTech) },
             onAddNow: { router.navigate(to: .choose3DGeneratorTech) },
-            onOnboardingStart: { router.navigate(to: .arInteraction) },
+            onOnboardingStart: {
+                let samplePet = pets.first ?? Pet3DProfile(name: "Sample", imageName: "moli")
+                router.navigate(to: .arInteraction(samplePet))
+            },
             onPetTap: { pet in router.navigate(to: .petDetail(pet)) }
         )
         .toolbar(.hidden, for: .navigationBar)

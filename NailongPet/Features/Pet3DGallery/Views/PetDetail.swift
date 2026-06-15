@@ -60,7 +60,7 @@ struct PetDetail: View {
             Spacer()
 
             Button(action: {
-                router.navigate(to: .arInteraction)
+                router.navigate(to: .arInteraction(pet))
             }) {
                 Text("Interact")
                     .font(.subheadRegular)

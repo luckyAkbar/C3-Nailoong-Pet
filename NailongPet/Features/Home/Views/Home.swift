@@ -45,7 +45,11 @@ struct Home: View {
                     pets: pets,
                     selected: selected,
                     onSelect: { viewModel.select($0) },
-                    onInteract: { router.navigate(to: .arInteraction) }
+                    onInteract: { 
+                        if let pet = selected {
+                            router.navigate(to: .arInteraction(pet))
+                        }
+                    }
                 )
                 .padding(.top, 16)
             }

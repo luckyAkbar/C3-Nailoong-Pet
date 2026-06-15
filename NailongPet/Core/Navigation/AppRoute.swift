@@ -16,5 +16,5 @@ enum AppRoute: Hashable {
     case processPetDetail
     case pet3DGallery
     case petDetail(Pet3DProfile)   // associated value: data pet yang dipilih
-    case arInteraction
+    case arInteraction(Pet3DProfile)
 }

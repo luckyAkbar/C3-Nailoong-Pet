@@ -35,12 +35,13 @@ final class PetStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = defaults.data(forKey: storageKey),
-              let decoded = try? JSONDecoder().decode([Pet3DProfile].self, from: data) else {
-            pets = []
-            return
+        if let data = defaults.data(forKey: storageKey),
+           let decoded = try? JSONDecoder().decode([Pet3DProfile].self, from: data) {
+            pets = decoded.sorted { $0.createdAt > $1.createdAt }
+        } else {
+            pets = HomeViewModel.samplePets
+            save()
         }
-        pets = decoded.sorted { $0.createdAt > $1.createdAt }
     }
 
     private func save() {

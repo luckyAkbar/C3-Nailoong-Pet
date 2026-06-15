@@ -39,8 +39,8 @@ struct ContentView: View {
                             Pet3DGalleryScreen()
                         case .petDetail(let pet):
                             PetDetail(pet: pet)
-                        case .arInteraction:
-                            ARInteractionScreen()
+                        case .arInteraction(let pet):
+                            ARInteractionScreen(pet: pet)
                         }
                     }
             }

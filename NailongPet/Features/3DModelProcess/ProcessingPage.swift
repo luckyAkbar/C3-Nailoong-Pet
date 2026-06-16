@@ -3,17 +3,56 @@ import SwiftUI
 struct ProcessPage: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
+    @EnvironmentObject private var sharpViewModel: SHARPViewModel
 
-    private var progressPercentage: Float { manager.reconstructionProgress * 100 }
+    var generatorType: GeneratorType
+
+    private var progressPercentage: Float {
+        switch generatorType {
+        case .lidar:
+            return manager.reconstructionProgress * 100
+        case .mlSharp:
+            if case .processing(let progress, _) = sharpViewModel.state {
+                return progress * 100
+            } else if case .completed = sharpViewModel.state {
+                return 100
+            }
+            return 0
+        }
+    }
 
     private var failureMessage: String? {
-        if case .failed(let error) = manager.state { return error.localizedDescription }
-        return nil
+        switch generatorType {
+        case .lidar:
+            if case .failed(let error) = manager.state { return error.localizedDescription }
+            return nil
+        case .mlSharp:
+            if case .failed(let message) = sharpViewModel.state { return message }
+            return nil
+        }
     }
 
     private var isCompleted: Bool {
-        if case .completed = manager.state { return true }
-        return false
+        switch generatorType {
+        case .lidar:
+            if case .completed = manager.state { return true }
+            return false
+        case .mlSharp:
+            if case .completed = sharpViewModel.state { return true }
+            return false
+        }
+    }
+
+    private var phaseText: String {
+        switch generatorType {
+        case .lidar:
+            return "Processing 3D model of your pet ...."
+        case .mlSharp:
+            if case .processing(_, let phase) = sharpViewModel.state {
+                return phase
+            }
+            return "Processing 3D model of your pet ...."
+        }
     }
 
     var body: some View {
@@ -65,7 +104,7 @@ struct ProcessPage: View {
             Spacer()
 
             VStack(spacing: 8) {
-                Text("Processing 3D model of your pet ....")
+                Text(phaseText)
                     .font(.title2Bold)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
@@ -129,7 +168,7 @@ struct ProcessPage: View {
                     .padding(.horizontal, 40)
             }
 
-            Button(action: { router.navigate(to: .processPetDetail) }) {
+            Button(action: { router.navigate(to: .processPetDetail(generatorType)) }) {
                 Text("Next")
                     .font(.subheadRegular)
                     .foregroundStyle(.white)
@@ -168,6 +207,7 @@ struct ProcessPage: View {
 
             Button(action: {
                 manager.reset()
+                sharpViewModel.reset()
                 router.navigateToRoot()
             }) {
                 Text("Back to Home")
@@ -232,7 +272,8 @@ struct ScanFrame: Shape {
 }
 
 #Preview("Processing") {
-    ProcessPage()
+    ProcessPage(generatorType: .lidar)
         .environmentObject(AppRouter())
         .environmentObject(LidarCaptureManager())
+        .environmentObject(SHARPViewModel())
 }

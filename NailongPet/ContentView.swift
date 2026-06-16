@@ -18,6 +18,7 @@ struct ContentView: View {
     @StateObject private var router = AppRouter()
     @StateObject private var captureManager = LidarCaptureManager()
     @StateObject private var petStore = PetStore()
+    @StateObject private var sharpViewModel = SHARPViewModel()
 
     var body: some View {
         if hasCompletedOnboarding {
@@ -31,10 +32,10 @@ struct ContentView: View {
                             SharpImageSelectionView()
                         case .lidar:
                             LidarCaptureView()
-                        case .processPage:
-                            ProcessPage()
-                        case .processPetDetail:
-                            ProcessPetDetail()
+                        case .processPage(let type):
+                            ProcessPage(generatorType: type)
+                        case .processPetDetail(let type):
+                            ProcessPetDetail(generatorType: type)
                         case .pet3DGallery:
                             Pet3DGalleryScreen()
                         case .petDetail(let pet):
@@ -50,6 +51,7 @@ struct ContentView: View {
             .environmentObject(router)
             .environmentObject(captureManager)
             .environmentObject(petStore)
+            .environmentObject(sharpViewModel)
         } else {
             OnboardingScreen(onFinish: {
                 hasCompletedOnboarding = true

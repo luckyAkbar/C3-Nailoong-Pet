@@ -11,7 +11,14 @@ struct ProcessPetDetail: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
+    @EnvironmentObject private var sharpViewModel: SHARPViewModel
     @EnvironmentObject private var petStore: PetStore
+
+    var generatorType: GeneratorType
+
+    init(generatorType: GeneratorType) {
+        self.generatorType = generatorType
+    }
 
     @State private var petName: String = ""
     @State private var petDescription: String = ""
@@ -26,7 +33,20 @@ struct ProcessPetDetail: View {
         imageName: AppIcon.moli.rawValue
     )
 
+    private var modelURL: URL? {
+        switch generatorType {
+        case .lidar:
+            return manager.modelURL
+        case .mlSharp:
+            if case .completed(let url) = sharpViewModel.state {
+                return url
+            }
+            return nil
+        }
+    }
+
     private func savePet() {
+        guard let url = modelURL else { return }
         petStore.add(
             name: petName.trimmingCharacters(in: .whitespaces),
             petDescription: petDescription.trimmingCharacters(in: .whitespaces),
@@ -34,6 +54,7 @@ struct ProcessPetDetail: View {
             context: modelContext
         )
         manager.reset()
+        sharpViewModel.reset()
         router.navigateToRoot()
     }
 
@@ -43,8 +64,13 @@ struct ProcessPetDetail: View {
 
             Spacer()
 
-            PetProfilePhoto(pet: pet)
-                .frame(width: 120, height: 120)
+            if let url = modelURL {
+                USDZPreviewView(url: url)
+                    .frame(width: 120, height: 120)
+            } else {
+                PetProfilePhoto(pet: pet)
+                    .frame(width: 120, height: 120)
+            }
 
             ZStack(alignment: .leading) {
                 HStack {
@@ -110,8 +136,9 @@ struct ProcessPetDetail: View {
 }
 
 #Preview {
-    ProcessPetDetail()
+    ProcessPetDetail(generatorType: .lidar)
         .environmentObject(AppRouter())
         .environmentObject(LidarCaptureManager())
+        .environmentObject(SHARPViewModel())
         .environmentObject(PetStore())
 }

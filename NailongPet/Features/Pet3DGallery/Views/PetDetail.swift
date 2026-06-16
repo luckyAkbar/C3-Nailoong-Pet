@@ -18,8 +18,13 @@ struct PetDetail: View {
 
             Spacer()
 
-            PetProfilePhoto(pet: pet)
-                .frame(width: 120, height: 120)
+            if let modelURL = pet.modelURL {
+                USDZPreviewView(url: modelURL)
+                    .frame(width: 120, height: 120)
+            } else {
+                PetProfilePhoto(pet: pet)
+                    .frame(width: 120, height: 120)
+            }
 
             ZStack(alignment: .leading) {
                 HStack {

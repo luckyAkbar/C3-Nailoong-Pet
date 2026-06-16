@@ -10,6 +10,7 @@ import PhotosUI
 
 struct SharpImageSelectionView: View {
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var sharpViewModel: SHARPViewModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedItem: PhotosPickerItem? = nil
@@ -73,6 +74,7 @@ struct SharpImageSelectionView: View {
                     if let data = try? await selectedItem?.loadTransferable(type: Data.self),
                        let uiImage = UIImage(data: data) {
                         selectedImage = Image(uiImage: uiImage)
+                        sharpViewModel.selectedImage = uiImage
                     }
                 }
             }
@@ -80,9 +82,17 @@ struct SharpImageSelectionView: View {
             Spacer()
 
             // MARK: - Start Button
-            Button(action: { router.navigate(to: .processPage) }) {
-                BrandButton(text: "Start")
+            Button(action: {
+                if let uiImage = sharpViewModel.selectedImage {
+                    Task {
+                        await sharpViewModel.process(uiImage: uiImage)
+                    }
+                    router.navigate(to: .processPage(.mlSharp))
+                }
+            }) {
+                BrandButton(text: "Start", isEnabled: sharpViewModel.selectedImage != nil)
             }
+            .disabled(sharpViewModel.selectedImage == nil)
         }
         // MARK: - Instruction Sheet
         .sheet(isPresented: $isShowingInstructionSheet) {

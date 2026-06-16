@@ -30,6 +30,7 @@ enum AppIcon: String {
     case imagePlaceholder = "photo"
     case favoriteMoment = "square.grid.3x3.square"
     case scanCompanion = "camera.fill"
+    case photoSearch = "photo.badge.magnifyingglass"
     
     //AR interaction Icon
     static let chevronLeft = "chevron.left"

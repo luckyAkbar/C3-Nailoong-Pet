@@ -24,8 +24,8 @@ struct Pet3DGalleryScreen: View {
             pets: pets,
             showOnboarding: $showOnboarding,
             onBack: { router.navigateToRoot() },
-            onAdd: { router.navigate(to: .choose3DGeneratorTech) },
-            onAddNow: { router.navigate(to: .choose3DGeneratorTech) },
+            onAdd: { router.showChoose3DSheet = true },
+            onAddNow: { router.showChoose3DSheet = true },
             onOnboardingStart: {
                 let samplePet = pets.first ?? Pet3DProfile(name: "Sample", imageName: "moli")
                 router.navigate(to: .arInteraction(samplePet))

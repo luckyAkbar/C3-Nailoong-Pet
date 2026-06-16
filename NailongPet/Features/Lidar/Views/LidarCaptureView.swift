@@ -14,7 +14,7 @@ struct LidarCaptureView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
     @Environment(\.dismiss) private var dismiss
-    @State private var isShowingInstructionSheet: Bool = true
+    @State private var isShowingInstructionSheet: Bool = false
 
     private let minimumShots = 15
 

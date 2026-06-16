@@ -14,6 +14,9 @@ final class AppRouter: ObservableObject {
 
     /// Stack navigasi aktif. NavigationStack membaca ini secara real-time.
     @Published var path = NavigationPath()
+    
+    /// Status untuk menampilkan modal Choose3DGeneratorSheet
+    @Published var showChoose3DSheet = false
 
     /// Navigasi maju ke layar tertentu (push).
     func navigate(to route: AppRoute) {

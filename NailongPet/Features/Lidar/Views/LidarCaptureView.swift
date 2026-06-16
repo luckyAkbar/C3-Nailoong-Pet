@@ -9,14 +9,13 @@ import SwiftUI
 import RealityKit
 
 // MARK: - Screen Container
-
 struct LidarCaptureView: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingInstructionSheet: Bool = false
 
-    private let minimumShots = 15
+    private let minimumShots = 20
 
     var body: some View {
         ZStack {
@@ -339,25 +338,33 @@ private struct UnsupportedDeviceView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 20) {
-                Image(systemName: "exclamationmark.triangle.fill")
+            VStack(spacing: 16) {
+                Image(systemName: "camera.metering.unknown")
                     .font(.system(size: 48))
                     .foregroundColor(.whitePrimarySurface.opacity(0.85))
 
-                Text("This device doesn't support 3D object capture.")
-                    .font(.subheadRegular)
+                Text("LiDAR scan isn't available on this device")
+                    .font(.title2Bold)
                     .foregroundColor(.whitePrimarySurface)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Text("3D object capture needs a LiDAR Scanner, found on iPhone Pro and iPad Pro models. Try creating your pet from photos instead.")
+                    .font(.subheadRegular)
+                    .foregroundColor(.whitePrimarySurface.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
 
                 Button(action: onClose) {
-                    Text("Back")
+                    Text("Choose another method")
                         .font(.subheadRegular)
                         .foregroundColor(.whitePrimarySurface)
-                        .frame(width: 160, height: 50)
+                        .frame(maxWidth: 260)
+                        .frame(height: 50)
                         .background(Color.orangePrimaryBrand)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.full.value))
                 }
+                .padding(.top, 8)
             }
         }
     }

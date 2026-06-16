@@ -50,7 +50,7 @@ struct ProcessPetDetail: View {
         petStore.add(
             name: petName.trimmingCharacters(in: .whitespaces),
             petDescription: petDescription.trimmingCharacters(in: .whitespaces),
-            modelFileName: manager.modelURL.lastPathComponent,
+            modelFileName: url.lastPathComponent,
             context: modelContext
         )
         manager.reset()

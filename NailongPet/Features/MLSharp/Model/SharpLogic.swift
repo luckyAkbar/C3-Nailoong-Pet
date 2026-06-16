@@ -260,26 +260,24 @@ func saveUSDZ(gaussians: Gaussians3D,
     let keepIndices = decimation < 1.0
         ? gaussians.decimationIndices(keepRatio: decimation)
         : Array(0..<gaussians.count)
-    
-    // ── Depth culling: keep only the front half of the scene ─────────────
-    let meanPtr0 = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
-    let zValues  = keepIndices.map { meanPtr0[$0 * 3 + 2] }   // raw Z before remap
-    let sortedZ  = zValues.sorted()
-    let zCutoff  = sortedZ[sortedZ.count / 4]                  // median = front 50%
 
-    // Keep only splats with Z ≤ median (closer to camera)
+    let meanPtr0    = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let zValues     = keepIndices.map { meanPtr0[$0 * 3 + 2] }
+    let sortedZ     = zValues.sorted()
+    let zCutoff     = sortedZ[sortedZ.count / 4]
     let culledIndices = keepIndices.filter { meanPtr0[$0 * 3 + 2] <= zCutoff }
+    let n           = culledIndices.count
 
-    let meanPtr  = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
-    let colorPtr = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
+    let meanPtr     = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let colorPtr    = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
 
-    let s: Float = 0.003
+    let s: Float    = 0.003
     var points:      [String] = []
     var faceIndices: [String] = []
-    var vertColors:  [String] = []
-    var faceCount = 0
+    var uvCoords:    [String] = []
+    var texPixels:   [UInt8]  = []
 
-    for i in culledIndices {
+    for (splatIdx, i) in culledIndices.enumerated() {
         let x = meanPtr[i * 3 + 0]
         let y = -meanPtr[i * 3 + 1] * 0.5
         let z = -meanPtr[i * 3 + 2] * 2.0
@@ -287,24 +285,31 @@ func saveUSDZ(gaussians: Gaussians3D,
         let r = linearRGBToSRGB(colorPtr[i * 3 + 0])
         let g = linearRGBToSRGB(colorPtr[i * 3 + 1])
         let b = linearRGBToSRGB(colorPtr[i * 3 + 2])
-        let col = "(\(r), \(g), \(b))"
+        texPixels += [
+            UInt8(max(0, min(255, r * 255))),
+            UInt8(max(0, min(255, g * 255))),
+            UInt8(max(0, min(255, b * 255))),
+            255
+        ]
 
-        let base = faceCount * 4
+        let u  = (Float(splatIdx) + 0.5) / Float(n)
+        let uv = "(\(u), 0.5)"
+
+        let base = splatIdx * 4
         points += [
             "(\(x-s), \(y+s), \(z))",
             "(\(x+s), \(y+s), \(z))",
             "(\(x+s), \(y-s), \(z))",
             "(\(x-s), \(y-s), \(z))",
         ]
-        vertColors += [col, col, col, col]
-        faceIndices += ["\(base), \(base+1), \(base+2)", "\(base), \(base+2), \(base+3)"]
-        faceCount += 1
+        uvCoords    += [uv, uv, uv, uv]
+        faceIndices += [
+            "\(base)", "\(base+1)", "\(base+2)",
+            "\(base)", "\(base+2)", "\(base+3)"
+        ]
     }
 
-    let pointsStr    = points.joined(separator: ", ")
-    let facesStr     = faceIndices.joined(separator: ", ")
-    let colorsStr    = vertColors.joined(separator: ", ")
-    let faceCountN   = faceCount * 2
+    let texturePNG = try makePNG(rgbaPixels: texPixels, width: n, height: 1)
 
     let usda = """
     #usda 1.0
@@ -318,88 +323,150 @@ func saveUSDZ(gaussians: Gaussians3D,
         def Mesh "Gaussians"
         {
             bool doubleSided = true
-            point3f[] points = [\(pointsStr)]
-            int[] faceVertexCounts = [\(Array(repeating: "3", count: faceCountN).joined(separator: ", "))]
-            int[] faceVertexIndices = [\(facesStr)]
-            color3f[] primvars:displayColor = [\(colorsStr)] (
+            point3f[] points = [\(points.joined(separator: ", "))]
+            int[] faceVertexCounts = [\(Array(repeating: "3", count: n * 2).joined(separator: ", "))]
+            int[] faceVertexIndices = [\(faceIndices.joined(separator: ", "))]
+            float2[] primvars:st = [\(uvCoords.joined(separator: ", "))] (
                 interpolation = "vertex"
             )
-            uniform token subdivisionScheme = "none"
+            rel material:binding = </Root/Mat>
+        }
+
+        def Material "Mat"
+        {
+            token outputs:surface.connect = </Root/Mat/Shader.outputs:surface>
+
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </Root/Mat/Tex.outputs:rgb>
+                token outputs:surface
+            }
+
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @texture.png@
+                float2 inputs:st.connect = </Root/Mat/TexReader.outputs:result>
+                token outputs:rgb
+            }
+
+            def Shader "TexReader"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                token inputs:varname = "st"
+                float2 outputs:result
+            }
         }
     }
     """
 
     let usdaData = usda.data(using: .utf8)!
-    let usdz     = try makeZip(fileName: "scene.usda", fileData: usdaData)
+    let usdz     = makeZip(files: [("scene.usda", usdaData), ("texture.png", texturePNG)])
     try usdz.write(to: outputPath)
-    print("✓ Saved USDZ with \(keepIndices.count) colored splats")
+    print("✓ Saved USDZ (\(n) splats, RealityKit-compatible)")
 }
 
-// Minimal ZIP writer (USDZ is just a ZIP with no compression)
-private func makeZip(fileName: String, fileData: Data) throws -> Data {
-    var zip = Data()
+private func makePNG(rgbaPixels: [UInt8], width: Int, height: Int) throws -> Data {
+    var pixels = rgbaPixels
+    let colorSpace = CGColorSpaceCreateDeviceRGB()
+    guard let context = CGContext(
+        data: &pixels,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: colorSpace,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ), let cgImage = context.makeImage() else {
+        throw NSError(domain: "SHARP", code: 20,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to create texture image"])
+    }
+    guard let pngData = UIImage(cgImage: cgImage).pngData() else {
+        throw NSError(domain: "SHARP", code: 21,
+                      userInfo: [NSLocalizedDescriptionKey: "Failed to encode texture PNG"])
+    }
+    return pngData
+}
 
-    let nameData    = fileName.data(using: .utf8)!
-    let crc         = crc32(fileData)
-    let fileSize    = UInt32(fileData.count)
-    let nameLen     = UInt16(nameData.count)
-    let localOffset = UInt32(0)
+// USDZ-compliant ZIP: each file's content must start at a 64-byte aligned offset
+private func makeZip(files: [(name: String, data: Data)]) -> Data {
+    var zip = Data()
+    struct Entry { let localOffset: UInt32; let name: Data; let size: UInt32; let crc: UInt32 }
+    var entries: [Entry] = []
 
     func u16(_ v: UInt16) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
     func u32(_ v: UInt32) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
 
-    // Local file header
-    var localHeader = Data()
-    localHeader += u32(0x04034b50)  // signature
-    localHeader += u16(20)          // version needed
-    localHeader += u16(0)           // flags
-    localHeader += u16(0)           // compression: stored
-    localHeader += u16(0)           // mod time
-    localHeader += u16(0)           // mod date
-    localHeader += u32(crc)
-    localHeader += u32(fileSize)
-    localHeader += u32(fileSize)
-    localHeader += u16(nameLen)
-    localHeader += u16(0)           // extra field length
-    localHeader += nameData
+    for (name, fileData) in files {
+        let nameData  = name.data(using: .utf8)!
+        let fileCRC   = crc32(fileData)
+        let fileSize  = UInt32(fileData.count)
+        let nameLen   = Int(nameData.count)
 
-    zip += localHeader
-    zip += fileData
+        // Pad extra field so content starts at a multiple of 64 bytes
+        let fixedLen  = 30 + nameLen
+        let pos       = zip.count + fixedLen
+        let remainder = pos % 64
+        let extraLen  = remainder == 0 ? 0 : 64 - remainder
 
-    // Central directory entry
-    var centralEntry = Data()
-    centralEntry += u32(0x02014b50) // signature
-    centralEntry += u16(20)         // version made by
-    centralEntry += u16(20)         // version needed
-    centralEntry += u16(0)          // flags
-    centralEntry += u16(0)          // compression
-    centralEntry += u16(0)          // mod time
-    centralEntry += u16(0)          // mod date
-    centralEntry += u32(crc)
-    centralEntry += u32(fileSize)
-    centralEntry += u32(fileSize)
-    centralEntry += u16(nameLen)
-    centralEntry += u16(0)          // extra
-    centralEntry += u16(0)          // comment
-    centralEntry += u16(0)          // disk start
-    centralEntry += u16(0)          // internal attr
-    centralEntry += u32(0)          // external attr
-    centralEntry += u32(localOffset)
-    centralEntry += nameData
+        entries.append(Entry(localOffset: UInt32(zip.count), name: nameData,
+                             size: fileSize, crc: fileCRC))
+
+        var header = Data()
+        header += u32(0x04034b50)
+        header += u16(20)
+        header += u16(0)
+        header += u16(0)
+        header += u16(0)
+        header += u16(0)
+        header += u32(fileCRC)
+        header += u32(fileSize)
+        header += u32(fileSize)
+        header += u16(UInt16(nameLen))
+        header += u16(UInt16(extraLen))
+        header += nameData
+        header += Data(repeating: 0, count: extraLen)
+
+        zip += header
+        zip += fileData
+    }
 
     let centralStart = UInt32(zip.count)
-    zip += centralEntry
+    var centralSize  = 0
+    for e in entries {
+        var rec = Data()
+        rec += u32(0x02014b50)
+        rec += u16(20)
+        rec += u16(20)
+        rec += u16(0)
+        rec += u16(0)
+        rec += u16(0)
+        rec += u16(0)
+        rec += u32(e.crc)
+        rec += u32(e.size)
+        rec += u32(e.size)
+        rec += u16(UInt16(e.name.count))
+        rec += u16(0)
+        rec += u16(0)
+        rec += u16(0)
+        rec += u16(0)
+        rec += u32(0)
+        rec += u32(e.localOffset)
+        rec += e.name
+        zip += rec
+        centralSize += rec.count
+    }
 
-    // End of central directory
     var eocd = Data()
     eocd += u32(0x06054b50)
-    eocd += u16(0)                          // disk number
-    eocd += u16(0)                          // disk with central dir
-    eocd += u16(1)                          // entries on disk
-    eocd += u16(1)                          // total entries
-    eocd += u32(UInt32(centralEntry.count))
+    eocd += u16(0)
+    eocd += u16(0)
+    eocd += u16(UInt16(files.count))
+    eocd += u16(UInt16(files.count))
+    eocd += u32(UInt32(centralSize))
     eocd += u32(centralStart)
-    eocd += u16(0)                          // comment length
+    eocd += u16(0)
     zip += eocd
 
     return zip

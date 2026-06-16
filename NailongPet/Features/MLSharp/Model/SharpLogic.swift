@@ -270,11 +270,17 @@ func saveUSDZ(gaussians: Gaussians3D,
     let meanPtr     = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
     let colorPtr    = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
 
-    let s: Float    = 0.003
-    var points:      [String] = []
-    var faceIndices: [String] = []
-    var uvCoords:    [String] = []
-    var texPixels:   [UInt8]  = []
+    let s: Float    = 0.008
+    // Build the geometry directly into single string buffers (instead of arrays of
+    // millions of String objects) to keep memory low while generating the USDA.
+    var pointsStr  = ""
+    var faceIdxStr = ""
+    var uvStr      = ""
+    var texPixels: [UInt8] = []
+    pointsStr.reserveCapacity(n * 8 * 30)
+    uvStr.reserveCapacity(n * 8 * 16)
+    faceIdxStr.reserveCapacity(n * 12 * 8)
+    texPixels.reserveCapacity(n * 4)
 
     for (splatIdx, i) in keepIndices.enumerated() {
         let x = meanPtr[i * 3 + 0]
@@ -297,18 +303,19 @@ func saveUSDZ(gaussians: Gaussians3D,
         let v    = (Float(texY) + 0.5) / Float(texHeight)
         let uv   = "(\(u), \(v))"
 
-        let base = splatIdx * 4
-        points += [
-            "(\(x-s), \(y+s), \(z))",
-            "(\(x+s), \(y+s), \(z))",
-            "(\(x+s), \(y-s), \(z))",
-            "(\(x-s), \(y-s), \(z))",
-        ]
-        uvCoords    += [uv, uv, uv, uv]
-        faceIndices += [
-            "\(base)", "\(base+1)", "\(base+2)",
-            "\(base)", "\(base+2)", "\(base+3)"
-        ]
+        // Each splat = two perpendicular quads (XY plane + YZ plane) = 4 triangles.
+        // This stays visible from any horizontal angle in AR (a single flat quad
+        // disappears edge-on) while using only 1/3 the geometry of a full cube.
+        let base = splatIdx * 8
+        // Quad A (faces ±Z): verts 0..3
+        pointsStr += "(\(x-s), \(y+s), \(z)), (\(x+s), \(y+s), \(z)), (\(x+s), \(y-s), \(z)), (\(x-s), \(y-s), \(z)), "
+        // Quad B (faces ±X): verts 4..7
+        pointsStr += "(\(x), \(y+s), \(z-s)), (\(x), \(y+s), \(z+s)), (\(x), \(y-s), \(z+s)), (\(x), \(y-s), \(z-s)), "
+
+        for _ in 0..<8 { uvStr += uv; uvStr += ", " }
+
+        faceIdxStr += "\(base), \(base+1), \(base+2), \(base), \(base+2), \(base+3), "
+        faceIdxStr += "\(base+4), \(base+5), \(base+6), \(base+4), \(base+6), \(base+7), "
     }
 
     let totalTexPixels = texWidth * texHeight
@@ -316,6 +323,13 @@ func saveUSDZ(gaussians: Gaussians3D,
         texPixels += [UInt8](repeating: 0, count: (totalTexPixels - n) * 4)
     }
     let texturePNG = try makePNG(rgbaPixels: texPixels, width: texWidth, height: texHeight)
+
+    // Trim trailing ", " from each buffer.
+    let pointsJoined  = String(pointsStr.dropLast(2))
+    let uvJoined      = String(uvStr.dropLast(2))
+    let faceIdxJoined = String(faceIdxStr.dropLast(2))
+    // 4 triangles per splat.
+    let faceCounts    = n > 0 ? String(repeating: "3, ", count: n * 4).dropLast(2) : ""
 
     let usda = """
     #usda 1.0
@@ -329,10 +343,10 @@ func saveUSDZ(gaussians: Gaussians3D,
         def Mesh "Gaussians"
         {
             bool doubleSided = true
-            point3f[] points = [\(points.joined(separator: ", "))]
-            int[] faceVertexCounts = [\(Array(repeating: "3", count: n * 2).joined(separator: ", "))]
-            int[] faceVertexIndices = [\(faceIndices.joined(separator: ", "))]
-            float2[] primvars:st = [\(uvCoords.joined(separator: ", "))] (
+            point3f[] points = [\(pointsJoined)]
+            int[] faceVertexCounts = [\(faceCounts)]
+            int[] faceVertexIndices = [\(faceIdxJoined)]
+            float2[] primvars:st = [\(uvJoined)] (
                 interpolation = "vertex"
             )
             rel material:binding = </Root/Mat>
@@ -512,32 +526,33 @@ class SHARPViewModel: ObservableObject {
     private var progressTimer: Task<Void, Never>?
 
     init() {
-        if let url = Bundle.main.url(forResource: "sharp", withExtension: "mlmodelc") {
-            print("✅ Found model at: \(url.path)")
-        } else {
-            print("❌ sharp.mlpackage NOT found in bundle")
-            // Also print everything in the bundle to help diagnose
+        // The SHARP model is ~642MB. We deliberately do NOT load it at startup —
+        // keeping it resident for the whole app lifetime causes memory pressure (jetsam),
+        // especially when entering the AR screen. It is loaded lazily in process() and
+        // released right after, so heavy screens run with that memory freed.
+        if Bundle.main.url(forResource: "sharp", withExtension: "mlmodelc") == nil {
+            print("❌ sharp.mlmodelc NOT found in bundle")
             if let resourcePath = Bundle.main.resourcePath {
                 let files = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath)) ?? []
                 print("Bundle contents:")
                 files.forEach { print("  - \($0)") }
             }
         }
+    }
 
-        // Load the model once at startup so the first inference is fast
-        Task {
-            do {
-                guard let modelURL = Bundle.main.url(forResource: "sharp",
-                                                      withExtension: "mlmodelc") else {
-                    self.errorMessage = "sharp.mlpackage not found in bundle."
-                    return
-                }
-                let r = try await SHARPModelRunner.loadModel(modelPath: modelURL)
-                self.runner = r
-            } catch {
-                self.errorMessage = error.localizedDescription
-            }
+    /// Loads the CoreML model on demand, reusing it if already loaded.
+    private func loadRunnerIfNeeded() async throws -> SHARPModelRunner {
+        if let runner { return runner }
+        guard let modelURL = Bundle.main.url(forResource: "sharp", withExtension: "mlmodelc") else {
+            throw NSError(domain: "SHARP", code: 99,
+                          userInfo: [NSLocalizedDescriptionKey: "sharp.mlmodelc not found in bundle."])
         }
+        // Lower input resolution (1024 vs 1536) to cut CoreML activation memory ~2.25×.
+        let r = try await SHARPModelRunner.loadModel(modelPath: modelURL,
+                                                     inputHeight: 1024,
+                                                     inputWidth: 1024)
+        runner = r
+        return r
     }
 
     func reset() {
@@ -571,10 +586,9 @@ class SHARPViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            guard let r = runner else {
-                throw NSError(domain: "SHARP", code: 98,
-                              userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
-            }
+            // Lazily load the ~642MB model only when needed.
+            state = .processing(progress: 0.0, phase: "Loading 3D model...")
+            let r = try await loadRunnerIfNeeded()
 
             // Step 1: Preprocessing
             state = .processing(progress: 0.0, phase: "Preprocessing image...")
@@ -585,8 +599,9 @@ class SHARPViewModel: ObservableObject {
             // Step 2: CoreML Prediction
             state = .processing(progress: 0.2, phase: "Running 3D model reconstruction...")
             startSmoothProgress(from: 0.2, to: 0.7, duration: 3.0)
+            // focalLengthPx matches input width so disparityFactor stays 1.0 (as with 1536).
             let gaussians = try await Task.detached(priority: .userInitiated) {
-                try r.predict(image: imageArray, focalLengthPx: 1536)
+                try r.predict(image: imageArray, focalLengthPx: 1024)
             }.value
             progressTimer?.cancel()
 
@@ -599,12 +614,17 @@ class SHARPViewModel: ObservableObject {
             let outURL = ScannedModelLibrary.modelURL(for: fileName)
             
             try await Task.detached(priority: .userInitiated) {
-                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.01)
+                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.02)
             }.value
             progressTimer?.cancel()
 
+            // Release the ~642MB model now that we're done, freeing memory before
+            // the user moves on (e.g. to the AR screen).
+            runner = nil
+
             state = .completed(usdzURL: outURL)
         } catch {
+            runner = nil
             errorMessage = error.localizedDescription
             state = .failed(error.localizedDescription)
         }

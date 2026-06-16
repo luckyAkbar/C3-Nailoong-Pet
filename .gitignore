@@ -57,3 +57,5 @@ fastlane/test_output
 # === Code Injection Tools ===
 iOSInjectionProject/
 .claude/settings.local.json
+# project.pbxproj
+sharp.mlpackage/

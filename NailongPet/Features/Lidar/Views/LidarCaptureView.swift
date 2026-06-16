@@ -32,8 +32,7 @@ struct LidarCaptureView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .preferredColorScheme(.dark)
-        .onChange(of: isShowingInstructionSheet) { _, showing in
-            guard !showing else { return }
+        .onAppear {
             if manager.session == nil, case .notStarted = manager.state {
                 manager.startSession()
             }
@@ -44,11 +43,14 @@ struct LidarCaptureView: View {
     private var captureContent: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                if let session = manager.session {
-                    ObjectCaptureView(session: session)
-                } else {
-                    Color.black
+                Group {
+                    if let session = manager.session {
+                        ObjectCaptureView(session: session)
+                    } else {
+                        Color.black
+                    }
                 }
+                .ignoresSafeArea(edges: .top)
 
                 CaptureTopBar(onClose: closeView, onTips: { isShowingInstructionSheet = true })
 
@@ -60,7 +62,6 @@ struct LidarCaptureView: View {
                     }
                 }
             }
-            .ignoresSafeArea(edges: .top)
 
             if let session = manager.session {
                 ControlPanel(
@@ -290,7 +291,7 @@ private struct CaptureThumbnail: View {
 private struct ScanProgressSlider: View {
     var captureCount: Int = 0
 
-    private let minCount = 15
+    private let minCount = 20
     private let maxCount = 100
 
     private var progress: Double {

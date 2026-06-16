@@ -17,29 +17,22 @@ struct ARViewContainer: UIViewRepresentable {
         arView.session.delegate = context.coordinator
         context.coordinator.arView = arView
         
-        guard let modelPath = viewModel.pet.modelFileName else {
-            print("AR Error: 3D model file name is nil.")
+        guard let modelURL = viewModel.pet.modelURL else {
+            print("AR Error: 3D model URL is nil or file not found.")
             return arView
         }        
-        // 2. Guard to check if the file is accessible in the app bundle
-        // We handle cases where the extension is included in the string or not.
-        let fileExtension = (modelPath as NSString).pathExtension
-        let fileName = (modelPath as NSString).deletingPathExtension
         
-        guard Bundle.main.url(forResource: fileName, withExtension: fileExtension.isEmpty ? "usdz" : fileExtension) != nil else {
-            print("AR Error: 3D model file '\(modelPath)' not found in app bundle.")
-            return arView
-        }
+        print("AR Debug: Loading model from URL: \(modelURL)")
         
         // 3. Create an anchor for a horizontal plane
         let anchor = AnchorEntity(plane: .horizontal)
         arView.scene.anchors.append(anchor)
         
         // 4. Load the model asynchronously
-        ModelEntity.loadModelAsync(named: modelPath)
+        ModelEntity.loadModelAsync(contentsOf: modelURL)
             .sink(receiveCompletion: { completion in
                 if case .failure(let error) = completion {
-                    print("AR Error loading model \(modelPath): \(error.localizedDescription)")
+                    print("AR Error loading model \(modelURL.lastPathComponent): \(error.localizedDescription)")
                 }
             }, receiveValue: { modelEntity in
                 modelEntity.generateCollisionShapes(recursive: true)

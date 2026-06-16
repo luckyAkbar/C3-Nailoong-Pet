@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ProcessPetDetail: View {
+    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
     @EnvironmentObject private var petStore: PetStore
@@ -29,7 +30,8 @@ struct ProcessPetDetail: View {
         petStore.add(
             name: petName.trimmingCharacters(in: .whitespaces),
             petDescription: petDescription.trimmingCharacters(in: .whitespaces),
-            modelFileName: manager.modelURL.lastPathComponent
+            modelFileName: manager.modelURL.lastPathComponent,
+            context: modelContext
         )
         manager.reset()
         router.navigateToRoot()

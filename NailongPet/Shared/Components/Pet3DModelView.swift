@@ -35,6 +35,10 @@ private struct SceneKitContainer: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: SCNView, context: Context) {
+        if uiView.scene !== scene {
+            uiView.scene = scene
+            uiView.scene?.background.contents = nil
+        }
         uiView.allowsCameraControl = allowsCameraControl
     }
 }

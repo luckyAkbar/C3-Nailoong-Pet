@@ -7,13 +7,16 @@
 
 import SwiftUI
 
-struct Pet3DProfile: Identifiable, Equatable, Hashable, Codable {
-    let id: UUID
-    let name: String
-    let imageName: String
-    let petDescription: String
-    let modelFileName: String?
-    let createdAt: Date
+import SwiftData
+
+@Model
+final class Pet3DProfile: Identifiable {
+    var id: UUID
+    var name: String
+    var imageName: String
+    var petDescription: String
+    var modelFileName: String?
+    var createdAt: Date
 
     init(
         id: UUID = UUID(),
@@ -33,7 +36,19 @@ struct Pet3DProfile: Identifiable, Equatable, Hashable, Codable {
 
     var modelURL: URL? {
         guard let modelFileName else { return nil }
-        return ScannedModelLibrary.modelURL(for: modelFileName)
+        
+        // First check if it's a scanned model in the documents directory
+        let scannedURL = ScannedModelLibrary.modelURL(for: modelFileName)
+        if FileManager.default.fileExists(atPath: scannedURL.path) {
+            return scannedURL
+        }
+        
+        // Fallback to check if it's bundled in the app (e.g. buncit.usdz)
+        if let bundleURL = Bundle.main.url(forResource: modelFileName, withExtension: nil) {
+            return bundleURL
+        }
+        
+        return scannedURL
     }
 }
 

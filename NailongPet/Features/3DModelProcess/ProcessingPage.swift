@@ -7,17 +7,37 @@ struct ProcessPage: View {
 
     var generatorType: GeneratorType
 
+    @State private var displayedProgress: Double = 10
+    @State private var progressTask: Task<Void, Never>?
+    @State private var didAutoAdvance = false
+
     private var progressPercentage: Float {
         switch generatorType {
         case .lidar:
             return manager.reconstructionProgress * 100
         case .mlSharp:
-            if case .processing(let progress, _) = sharpViewModel.state {
-                return progress * 100
-            } else if case .completed = sharpViewModel.state {
+            if case .completed = sharpViewModel.state {
                 return 100
             }
-            return 0
+            return Float(displayedProgress)
+        }
+    }
+
+    private var targetProgress: Double {
+        switch generatorType {
+        case .lidar:
+            return Double(manager.reconstructionProgress * 100)
+        case .mlSharp:
+            switch sharpViewModel.state {
+            case .idle:
+                return 0
+            case .processing(let progress, _):
+                return min(Double(progress * 100), 99)
+            case .completed:
+                return 100
+            case .failed:
+                return displayedProgress
+            }
         }
     }
 
@@ -48,8 +68,15 @@ struct ProcessPage: View {
         case .lidar:
             return "Processing 3D model of your pet ...."
         case .mlSharp:
-            if case .processing(_, let phase) = sharpViewModel.state {
+            switch sharpViewModel.state {
+            case .idle:
+                return "Preparing Sharp model..."
+            case .processing(_, let phase):
                 return phase
+            case .completed:
+                return "Done. Preparing next step..."
+            case .failed:
+                return ""
             }
             return "Processing 3D model of your pet ...."
         }
@@ -68,6 +95,81 @@ struct ProcessPage: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            startProgressAnimation()
+            scheduleAutoAdvanceIfNeeded()
+        }
+        .onChange(of: targetProgress) { _ in
+            startProgressAnimation()
+        }
+        .onChange(of: sharpViewModel.state) { _ in
+            scheduleAutoAdvanceIfNeeded()
+        }
+    }
+
+    private func startProgressAnimation() {
+        progressTask?.cancel()
+
+        progressTask = Task {
+            let target = targetProgress
+
+            if generatorType == .mlSharp && displayedProgress == 0 && target > 0 {
+                await MainActor.run {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        displayedProgress = 1.5
+                    }
+                }
+            }
+
+            while !Task.isCancelled {
+                let current = await MainActor.run { displayedProgress }
+                let remaining = target - current
+
+                if remaining <= 0.1 {
+                    await MainActor.run {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            displayedProgress = target
+                        }
+                    }
+                    break
+                }
+
+                let step = max(0.35, remaining * 0.08)
+                let delay: UInt64
+                switch target {
+                case ..<25:
+                    delay = 70_000_000
+                case ..<75:
+                    delay = 110_000_000
+                default:
+                    delay = 160_000_000
+                }
+
+                await MainActor.run {
+                    withAnimation(.linear(duration: Double(delay) / 1_000_000_000)) {
+                        displayedProgress = min(current + step, target)
+                    }
+                }
+
+                try? await Task.sleep(nanoseconds: delay)
+            }
+        }
+    }
+
+    private func scheduleAutoAdvanceIfNeeded() {
+        guard generatorType == .mlSharp,
+              case .completed = sharpViewModel.state,
+              !didAutoAdvance else { return }
+
+        didAutoAdvance = true
+
+        Task { @MainActor in
+            withAnimation(.easeOut(duration: 0.2)) {
+                displayedProgress = 100
+            }
+            try? await Task.sleep(nanoseconds: 650_000_000)
+            router.navigate(to: .processPetDetail(.mlSharp))
+        }
     }
 
     private var processingContent: some View {

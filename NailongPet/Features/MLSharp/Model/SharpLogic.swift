@@ -73,8 +73,12 @@ class SHARPModelRunner {
     private let inputHeight: Int
     private let inputWidth:  Int
 
-    private init(model: MLModel, inputHeight: Int = 1536, inputWidth: Int = 1536) {
-        self.model       = model
+    init(modelPath: URL, inputHeight: Int = 1536, inputWidth: Int = 1536) throws {
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuOnly
+
+        let compiled = try SHARPModelRunner.compileIfNeeded(at: modelPath)
+        self.model       = try MLModel(contentsOf: compiled, configuration: config)
         self.inputHeight = inputHeight
         self.inputWidth  = inputWidth
 
@@ -82,18 +86,9 @@ class SHARPModelRunner {
         print("Outputs: \(model.modelDescription.outputDescriptionsByName.keys.joined(separator: ", "))")
     }
 
-    static func loadModel(modelPath: URL, inputHeight: Int = 1536, inputWidth: Int = 1536) async throws -> SHARPModelRunner {
-        let config = MLModelConfiguration()
-        config.computeUnits = .cpuOnly
-
-        let compiled = try await compileIfNeeded(at: modelPath)
-        let model = try await MLModel.load(contentsOf: compiled, configuration: config)
-        return SHARPModelRunner(model: model, inputHeight: inputHeight, inputWidth: inputWidth)
-    }
-
     // MARK: Compile
 
-    private static func compileIfNeeded(at modelPath: URL) async throws -> URL {
+    private static func compileIfNeeded(at modelPath: URL) throws -> URL {
         let fm  = FileManager.default
         let ext = modelPath.pathExtension.lowercased()
 
@@ -122,9 +117,7 @@ class SHARPModelRunner {
 
         print("Compiling model…")
         let t   = CFAbsoluteTimeGetCurrent()
-        let tmp = try await Task.detached(priority: .userInitiated) {
-            try MLModel.compileModel(at: modelPath)
-        }.value
+        let tmp = try MLModel.compileModel(at: modelPath)
         print("✓ Compiled in \(String(format: "%.1f", CFAbsoluteTimeGetCurrent() - t))s")
 
         try? fm.removeItem(at: compiledPath)
@@ -237,7 +230,7 @@ class SHARPModelRunner {
                   let c  = output.featureValue(for: sorted[3])?.multiArrayValue,
                   let o  = output.featureValue(for: sorted[4])?.multiArrayValue else {
                 throw NSError(domain: "SHARP", code: 5,
-                               userInfo: [NSLocalizedDescriptionKey: "Cannot extract outputs. Available: \(outputNames)"])
+                              userInfo: [NSLocalizedDescriptionKey: "Cannot extract outputs. Available: \(outputNames)"])
             }
             print("Using outputs by sorted order: \(sorted)")
             return Gaussians3D(meanVectors: mv, singularValues: sv, quaternions: q, colors: c, opacities: o)
@@ -260,23 +253,26 @@ func saveUSDZ(gaussians: Gaussians3D,
     let keepIndices = decimation < 1.0
         ? gaussians.decimationIndices(keepRatio: decimation)
         : Array(0..<gaussians.count)
+    
+    // ── Depth culling: keep only the front half of the scene ─────────────
+    let meanPtr0 = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let zValues  = keepIndices.map { meanPtr0[$0 * 3 + 2] }   // raw Z before remap
+    let sortedZ  = zValues.sorted()
+    let zCutoff  = sortedZ[sortedZ.count / 4]                  // median = front 50%
 
-    let n = keepIndices.count
+    // Keep only splats with Z ≤ median (closer to camera)
+    let culledIndices = keepIndices.filter { meanPtr0[$0 * 3 + 2] <= zCutoff }
 
-    // Metal limits texture width to 32768. Use a ~square layout so texWidth stays well within limits.
-    let texWidth  = min(max(1, Int(ceil(sqrt(Double(n))))), 8192)
-    let texHeight = n == 0 ? 1 : (n + texWidth - 1) / texWidth
+    let meanPtr  = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let colorPtr = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
 
-    let meanPtr     = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
-    let colorPtr    = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
-
-    let s: Float    = 0.003
+    let s: Float = 0.003
     var points:      [String] = []
     var faceIndices: [String] = []
-    var uvCoords:    [String] = []
-    var texPixels:   [UInt8]  = []
+    var vertColors:  [String] = []
+    var faceCount = 0
 
-    for (splatIdx, i) in keepIndices.enumerated() {
+    for i in culledIndices {
         let x = meanPtr[i * 3 + 0]
         let y = -meanPtr[i * 3 + 1] * 0.5
         let z = -meanPtr[i * 3 + 2] * 2.0
@@ -284,38 +280,24 @@ func saveUSDZ(gaussians: Gaussians3D,
         let r = linearRGBToSRGB(colorPtr[i * 3 + 0])
         let g = linearRGBToSRGB(colorPtr[i * 3 + 1])
         let b = linearRGBToSRGB(colorPtr[i * 3 + 2])
-        texPixels += [
-            UInt8(max(0, min(255, r * 255))),
-            UInt8(max(0, min(255, g * 255))),
-            UInt8(max(0, min(255, b * 255))),
-            255
-        ]
+        let col = "(\(r), \(g), \(b))"
 
-        let texX = splatIdx % texWidth
-        let texY = splatIdx / texWidth
-        let u    = (Float(texX) + 0.5) / Float(texWidth)
-        let v    = (Float(texY) + 0.5) / Float(texHeight)
-        let uv   = "(\(u), \(v))"
-
-        let base = splatIdx * 4
+        let base = faceCount * 4
         points += [
             "(\(x-s), \(y+s), \(z))",
             "(\(x+s), \(y+s), \(z))",
             "(\(x+s), \(y-s), \(z))",
             "(\(x-s), \(y-s), \(z))",
         ]
-        uvCoords    += [uv, uv, uv, uv]
-        faceIndices += [
-            "\(base)", "\(base+1)", "\(base+2)",
-            "\(base)", "\(base+2)", "\(base+3)"
-        ]
+        vertColors += [col, col, col, col]
+        faceIndices += ["\(base), \(base+1), \(base+2)", "\(base), \(base+2), \(base+3)"]
+        faceCount += 1
     }
 
-    let totalTexPixels = texWidth * texHeight
-    if totalTexPixels > n {
-        texPixels += [UInt8](repeating: 0, count: (totalTexPixels - n) * 4)
-    }
-    let texturePNG = try makePNG(rgbaPixels: texPixels, width: texWidth, height: texHeight)
+    let pointsStr    = points.joined(separator: ", ")
+    let facesStr     = faceIndices.joined(separator: ", ")
+    let colorsStr    = vertColors.joined(separator: ", ")
+    let faceCountN   = faceCount * 2
 
     let usda = """
     #usda 1.0
@@ -329,152 +311,88 @@ func saveUSDZ(gaussians: Gaussians3D,
         def Mesh "Gaussians"
         {
             bool doubleSided = true
-            point3f[] points = [\(points.joined(separator: ", "))]
-            int[] faceVertexCounts = [\(Array(repeating: "3", count: n * 2).joined(separator: ", "))]
-            int[] faceVertexIndices = [\(faceIndices.joined(separator: ", "))]
-            float2[] primvars:st = [\(uvCoords.joined(separator: ", "))] (
+            point3f[] points = [\(pointsStr)]
+            int[] faceVertexCounts = [\(Array(repeating: "3", count: faceCountN).joined(separator: ", "))]
+            int[] faceVertexIndices = [\(facesStr)]
+            color3f[] primvars:displayColor = [\(colorsStr)] (
                 interpolation = "vertex"
             )
-            rel material:binding = </Root/Mat>
-        }
-
-        def Material "Mat"
-        {
-            token outputs:surface.connect = </Root/Mat/Shader.outputs:surface>
-
-            def Shader "Shader"
-            {
-                uniform token info:id = "UsdPreviewSurface"
-                color3f inputs:diffuseColor.connect = </Root/Mat/Tex.outputs:rgb>
-                token outputs:surface
-            }
-
-            def Shader "Tex"
-            {
-                uniform token info:id = "UsdUVTexture"
-                asset inputs:file = @texture.png@
-                float2 inputs:st.connect = </Root/Mat/TexReader.outputs:result>
-                token outputs:rgb
-            }
-
-            def Shader "TexReader"
-            {
-                uniform token info:id = "UsdPrimvarReader_float2"
-                token inputs:varname = "st"
-                float2 outputs:result
-            }
+            uniform token subdivisionScheme = "none"
         }
     }
     """
 
     let usdaData = usda.data(using: .utf8)!
-    let usdz     = makeZip(files: [("scene.usda", usdaData), ("texture.png", texturePNG)])
+    let usdz     = try makeZip(fileName: "scene.usda", fileData: usdaData)
     try usdz.write(to: outputPath)
-    print("✓ Saved USDZ (\(n) splats, RealityKit-compatible)")
+    print("✓ Saved USDZ with \(keepIndices.count) colored splats")
 }
 
-private func makePNG(rgbaPixels: [UInt8], width: Int, height: Int) throws -> Data {
-    var pixels = rgbaPixels
-    return try pixels.withUnsafeMutableBytes { rawBuffer in
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: rawBuffer.baseAddress,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ), let cgImage = context.makeImage() else {
-            throw NSError(domain: "SHARP", code: 20,
-                          userInfo: [NSLocalizedDescriptionKey: "Failed to create texture image"])
-        }
-        guard let pngData = UIImage(cgImage: cgImage).pngData() else {
-            throw NSError(domain: "SHARP", code: 21,
-                          userInfo: [NSLocalizedDescriptionKey: "Failed to encode texture PNG"])
-        }
-        return pngData
-    }
-}
-
-// USDZ-compliant ZIP: each file's content must start at a 64-byte aligned offset
-private func makeZip(files: [(name: String, data: Data)]) -> Data {
+// Minimal ZIP writer (USDZ is just a ZIP with no compression)
+private func makeZip(fileName: String, fileData: Data) throws -> Data {
     var zip = Data()
-    struct Entry { let localOffset: UInt32; let name: Data; let size: UInt32; let crc: UInt32 }
-    var entries: [Entry] = []
+
+    let nameData    = fileName.data(using: .utf8)!
+    let crc         = crc32(fileData)
+    let fileSize    = UInt32(fileData.count)
+    let nameLen     = UInt16(nameData.count)
+    let localOffset = UInt32(0)
 
     func u16(_ v: UInt16) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
     func u32(_ v: UInt32) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
 
-    for (name, fileData) in files {
-        let nameData  = name.data(using: .utf8)!
-        let fileCRC   = crc32(fileData)
-        let fileSize  = UInt32(fileData.count)
-        let nameLen   = Int(nameData.count)
+    // Local file header
+    var localHeader = Data()
+    localHeader += u32(0x04034b50)  // signature
+    localHeader += u16(20)          // version needed
+    localHeader += u16(0)           // flags
+    localHeader += u16(0)           // compression: stored
+    localHeader += u16(0)           // mod time
+    localHeader += u16(0)           // mod date
+    localHeader += u32(crc)
+    localHeader += u32(fileSize)
+    localHeader += u32(fileSize)
+    localHeader += u16(nameLen)
+    localHeader += u16(0)           // extra field length
+    localHeader += nameData
 
-        // Pad extra field so content starts at a multiple of 64 bytes
-        let fixedLen  = 30 + nameLen
-        let pos       = zip.count + fixedLen
-        let remainder = pos % 64
-        let extraLen  = remainder == 0 ? 0 : 64 - remainder
+    zip += localHeader
+    zip += fileData
 
-        entries.append(Entry(localOffset: UInt32(zip.count), name: nameData,
-                             size: fileSize, crc: fileCRC))
-
-        var header = Data()
-        header += u32(0x04034b50)
-        header += u16(20)
-        header += u16(0)
-        header += u16(0)
-        header += u16(0)
-        header += u16(0)
-        header += u32(fileCRC)
-        header += u32(fileSize)
-        header += u32(fileSize)
-        header += u16(UInt16(nameLen))
-        header += u16(UInt16(extraLen))
-        header += nameData
-        header += Data(repeating: 0, count: extraLen)
-
-        zip += header
-        zip += fileData
-    }
+    // Central directory entry
+    var centralEntry = Data()
+    centralEntry += u32(0x02014b50) // signature
+    centralEntry += u16(20)         // version made by
+    centralEntry += u16(20)         // version needed
+    centralEntry += u16(0)          // flags
+    centralEntry += u16(0)          // compression
+    centralEntry += u16(0)          // mod time
+    centralEntry += u16(0)          // mod date
+    centralEntry += u32(crc)
+    centralEntry += u32(fileSize)
+    centralEntry += u32(fileSize)
+    centralEntry += u16(nameLen)
+    centralEntry += u16(0)          // extra
+    centralEntry += u16(0)          // comment
+    centralEntry += u16(0)          // disk start
+    centralEntry += u16(0)          // internal attr
+    centralEntry += u32(0)          // external attr
+    centralEntry += u32(localOffset)
+    centralEntry += nameData
 
     let centralStart = UInt32(zip.count)
-    var centralSize  = 0
-    for e in entries {
-        var rec = Data()
-        rec += u32(0x02014b50)
-        rec += u16(20)
-        rec += u16(20)
-        rec += u16(0)
-        rec += u16(0)
-        rec += u16(0)
-        rec += u16(0)
-        rec += u32(e.crc)
-        rec += u32(e.size)
-        rec += u32(e.size)
-        rec += u16(UInt16(e.name.count))
-        rec += u16(0)
-        rec += u16(0)
-        rec += u16(0)
-        rec += u16(0)
-        rec += u32(0)
-        rec += u32(e.localOffset)
-        rec += e.name
-        zip += rec
-        centralSize += rec.count
-    }
+    zip += centralEntry
 
+    // End of central directory
     var eocd = Data()
     eocd += u32(0x06054b50)
-    eocd += u16(0)
-    eocd += u16(0)
-    eocd += u16(UInt16(files.count))
-    eocd += u16(UInt16(files.count))
-    eocd += u32(UInt32(centralSize))
+    eocd += u16(0)                          // disk number
+    eocd += u16(0)                          // disk with central dir
+    eocd += u16(1)                          // entries on disk
+    eocd += u16(1)                          // total entries
+    eocd += u32(UInt32(centralEntry.count))
     eocd += u32(centralStart)
-    eocd += u16(0)
+    eocd += u16(0)                          // comment length
     zip += eocd
 
     return zip
@@ -495,119 +413,115 @@ private func crc32(_ data: Data) -> UInt32 {
 
 // MARK: - ViewModel
 
-enum SHARPState: Equatable {
-    case notStarted
-    case processing(progress: Float, phase: String)
-    case completed(usdzURL: URL)
+enum SharpProcessState: Equatable {
+    case idle
+    case processing(Float, String)
+    case completed(URL)
     case failed(String)
 }
 
 @MainActor
-class SHARPViewModel: ObservableObject {
-    @Published var state: SHARPState = .notStarted
+final class SHARPViewModel: ObservableObject {
     @Published var selectedImage: UIImage? = nil
+    @Published var usdzURL: URL? = nil
+    @Published var state: SharpProcessState = .idle
+    @Published var isProcessing: Bool = false
     @Published var errorMessage: String? = nil
 
     private var runner: SHARPModelRunner?
-    private var progressTimer: Task<Void, Never>?
+    private var runnerLoadTask: Task<Void, Never>?
 
     init() {
-        if let url = Bundle.main.url(forResource: "sharp", withExtension: "mlmodelc") {
-            print("✅ Found model at: \(url.path)")
-        } else {
-            print("❌ sharp.mlpackage NOT found in bundle")
-            // Also print everything in the bundle to help diagnose
-            if let resourcePath = Bundle.main.resourcePath {
-                let files = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath)) ?? []
-                print("Bundle contents:")
-                files.forEach { print("  - \($0)") }
-            }
-        }
-
-        // Load the model once at startup so the first inference is fast
-        Task {
+        runnerLoadTask = Task.detached(priority: .userInitiated) {
             do {
                 guard let modelURL = Bundle.main.url(forResource: "sharp",
                                                       withExtension: "mlmodelc") else {
-                    self.errorMessage = "sharp.mlpackage not found in bundle."
+                    await MainActor.run {
+                        self.errorMessage = "sharp.mlpackage not found in bundle."
+                    }
                     return
                 }
-                let r = try await SHARPModelRunner.loadModel(modelPath: modelURL)
-                self.runner = r
+                let r = try SHARPModelRunner(modelPath: modelURL)
+                await MainActor.run { self.runner = r }
             } catch {
-                self.errorMessage = error.localizedDescription
+                await MainActor.run { self.errorMessage = error.localizedDescription }
             }
         }
     }
 
-    func reset() {
-        progressTimer?.cancel()
-        progressTimer = nil
-        state = .notStarted
-        selectedImage = nil
-        errorMessage = nil
+    private func loadRunnerIfNeeded() async throws -> SHARPModelRunner {
+        if let runner {
+            return runner
+        }
+
+        if let task = runnerLoadTask {
+            await task.value
+        }
+
+        if let runner {
+            return runner
+        }
+
+        throw NSError(domain: "SHARP", code: 98,
+                      userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
     }
 
-    private func startSmoothProgress(from start: Float, to end: Float, duration: Double) {
-        progressTimer?.cancel()
-        progressTimer = Task {
-            let steps = 20
-            let stepDuration = duration / Double(steps)
-            let stepAmount = (end - start) / Float(steps)
-            var currentProgress = start
-            for _ in 0..<steps {
-                if Task.isCancelled { break }
-                try? await Task.sleep(nanoseconds: UInt64(stepDuration * 1_000_000_000))
-                currentProgress += stepAmount
-                if case .processing(_, let phase) = self.state {
-                    self.state = .processing(progress: currentProgress, phase: phase)
-                }
+    func process(item: PhotosPickerItem?) async {
+        guard let item else { return }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let uiImage = UIImage(data: data) else {
+                throw NSError(domain: "SHARP", code: 99,
+                              userInfo: [NSLocalizedDescriptionKey: "Could not load image data"])
             }
+
+            await process(uiImage: uiImage)
+        } catch {
+            let message = error.localizedDescription
+            errorMessage = message
+            state = .failed(message)
         }
     }
 
     func process(uiImage: UIImage) async {
-        state = .processing(progress: 0.0, phase: "Preparing image...")
+        selectedImage = uiImage
+        isProcessing = true
         errorMessage = nil
+        usdzURL = nil
+        state = .processing(0.05, "Preparing image...")
 
         do {
-            guard let r = runner else {
-                throw NSError(domain: "SHARP", code: 98,
-                              userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
-            }
+            let runner = try await loadRunnerIfNeeded()
 
-            // Step 1: Preprocessing
-            state = .processing(progress: 0.0, phase: "Preprocessing image...")
-            startSmoothProgress(from: 0.0, to: 0.2, duration: 0.5)
-            let imageArray = try r.preprocessImage(from: uiImage)
-            progressTimer?.cancel()
+            state = .processing(0.25, "Running Sharp AI...")
+            let imageArray = try runner.preprocessImage(from: uiImage)
+            state = .processing(0.55, "Building 3D checkpoints...")
+            let gaussians = try runner.predict(image: imageArray, focalLengthPx: 1536)
 
-            // Step 2: CoreML Prediction
-            state = .processing(progress: 0.2, phase: "Running 3D model reconstruction...")
-            startSmoothProgress(from: 0.2, to: 0.7, duration: 3.0)
-            let gaussians = try await Task.detached(priority: .userInitiated) {
-                try r.predict(image: imageArray, focalLengthPx: 1536)
-            }.value
-            progressTimer?.cancel()
+            state = .processing(0.75, "Saving 3D model...")
+            let outputFileName = "model-\(UUID().uuidString).usdz"
+            let outURL = ScannedModelLibrary.modelURL(for: outputFileName)
+            try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
 
-            // Step 3: Generating USDZ
-            state = .processing(progress: 0.7, phase: "Generating 3D model (USDZ)...")
-            startSmoothProgress(from: 0.7, to: 0.95, duration: 2.0)
-            
-            let uniqueID = UUID().uuidString
-            let fileName = "model-\(uniqueID).usdz"
-            let outURL = ScannedModelLibrary.modelURL(for: fileName)
-            
-            try await Task.detached(priority: .userInitiated) {
-                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.01)
-            }.value
-            progressTimer?.cancel()
-
-            state = .completed(usdzURL: outURL)
+            usdzURL = outURL
+            state = .processing(0.99, "Finalizing 3D model...")
+            state = .completed(outURL)
         } catch {
-            errorMessage = error.localizedDescription
-            state = .failed(error.localizedDescription)
+            let message = error.localizedDescription
+            errorMessage = message
+            state = .failed(message)
         }
+
+        isProcessing = false
+    }
+
+    func reset() {
+        selectedImage = nil
+        usdzURL = nil
+        state = .idle
+        isProcessing = false
+        errorMessage = nil
     }
 }
 

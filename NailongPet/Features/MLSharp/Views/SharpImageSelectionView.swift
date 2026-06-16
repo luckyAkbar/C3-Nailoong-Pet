@@ -73,8 +73,8 @@ struct SharpImageSelectionView: View {
                 Task {
                     if let data = try? await selectedItem?.loadTransferable(type: Data.self),
                        let uiImage = UIImage(data: data) {
-                        selectedImage = Image(uiImage: uiImage)
                         sharpViewModel.selectedImage = uiImage
+                        selectedImage = Image(uiImage: uiImage)
                     }
                 }
             }
@@ -107,4 +107,5 @@ struct SharpImageSelectionView: View {
 #Preview {
     SharpImageSelectionView()
         .environmentObject(AppRouter())
+    .environmentObject(SHARPViewModel())
 }

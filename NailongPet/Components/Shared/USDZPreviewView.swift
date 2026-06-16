@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SceneKit
+import UIKit
 
 struct USDZPreviewView: View {
     let url: URL
@@ -14,31 +15,43 @@ struct USDZPreviewView: View {
 
     var body: some View {
         ZStack {
-            Color.orangePrimaryBrand
+            Color.surfacePrimary
 
-            if let scene = try? SCNScene(url: url, options: nil) {
-                SceneView(
-                    scene: scene,
-                    options: [.allowsCameraControl, .autoenablesDefaultLighting]
-                )
+            TransparentUSDZSceneView(url: url)
                 .padding(8)
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .foregroundColor(.white)
-                        .font(.title)
-                    Text("Error loading preview")
-                        .font(.footnoteRegular)
-                        .foregroundColor(.white)
-                }
-                .padding(8)
-            }
         }
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
         .innerShadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
         .aspectRatio(1, contentMode: .fit)
         .padding(imageWhitePadding)
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct TransparentUSDZSceneView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> SCNView {
+        let view = SCNView()
+        view.backgroundColor = .clear
+        view.isOpaque = false
+        view.allowsCameraControl = true
+        view.autoenablesDefaultLighting = true
+        view.antialiasingMode = .multisampling4X
+        view.contentMode = .scaleAspectFit
+
+        if let scene = try? SCNScene(url: url, options: nil) {
+            scene.background.contents = UIColor.clear
+            view.scene = scene
+        }
+
+        return view
+    }
+
+    func updateUIView(_ uiView: SCNView, context: Context) {
+        guard uiView.scene == nil, let scene = try? SCNScene(url: url, options: nil) else { return }
+        scene.background.contents = UIColor.clear
+        uiView.scene = scene
     }
 }
 

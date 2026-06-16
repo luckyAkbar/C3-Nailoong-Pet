@@ -95,6 +95,8 @@ struct ProcessPage: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
         .onAppear {
             startProgressAnimation()
             scheduleAutoAdvanceIfNeeded()

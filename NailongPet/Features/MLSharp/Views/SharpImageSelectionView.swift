@@ -14,7 +14,7 @@ struct SharpImageSelectionView: View {
 
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var selectedImage: Image? = nil
-    @State private var isShowingInstructionSheet: Bool = true
+    @State private var isShowingInstructionSheet: Bool = false
 
     var body: some View {
         VStack {

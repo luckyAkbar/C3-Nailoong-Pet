@@ -26,7 +26,7 @@ struct ContentView: View {
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .choose3DGeneratorTech:
-                            Choose3DGeneratorTech()
+                            EmptyView()
                         case .mlSharp:
                             SharpImageSelectionView()
                         case .lidar:
@@ -42,6 +42,9 @@ struct ContentView: View {
                         case .arInteraction(let pet):
                             ARInteractionScreen(pet: pet)
                         }
+                    }
+                    .sheet(isPresented: $router.showChoose3DSheet) {
+                        Choose3DGeneratorSheet()
                     }
             }
             .environmentObject(router)

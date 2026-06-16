@@ -32,13 +32,13 @@ struct Home: View {
                     }
                 },
                 onAdd: {
-                    router.navigate(to: .choose3DGeneratorTech)
+                    router.showChoose3DSheet = true
                 }
             )
 
             if pets.isEmpty {
                 HomeEmptyState(
-                    onCreate: { router.navigate(to: .choose3DGeneratorTech) }
+                    onCreate: { router.showChoose3DSheet = true }
                 )
             } else {
                 HomeFilledState(

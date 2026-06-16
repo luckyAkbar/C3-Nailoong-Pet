@@ -8,13 +8,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct Home: View {
+    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var petStore: PetStore
     @StateObject private var viewModel = HomeViewModel()
 
-    private var pets: [Pet3DProfile] { petStore.pets }
+    @Query(sort: \Pet3DProfile.createdAt, order: .reverse) private var pets: [Pet3DProfile]
+
     private var selected: Pet3DProfile? { viewModel.selectedPet(from: pets) }
 
     var body: some View {
@@ -28,7 +31,7 @@ struct Home: View {
                 },
                 onDelete: {
                     if let selected {
-                        petStore.delete(selected)
+                        petStore.delete(selected, context: modelContext)
                     }
                 },
                 onAdd: {
@@ -58,24 +61,27 @@ struct Home: View {
         .background(Color.surfaceCanvas.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .animation(.easeInOut(duration: 0.25), value: pets.isEmpty)
+        .onAppear {
+            HomeViewModel.loadSampleIfNeeded(context: modelContext)
+        }
     }
 }
 
 #Preview("Filled") {
     Home()
         .environmentObject(AppRouter())
-        .environmentObject(PetStore.preview(HomeViewModel.samplePets))
+        .environmentObject(PetStore.preview())
 }
 
 #Preview("Empty") {
     Home()
         .environmentObject(AppRouter())
-        .environmentObject(PetStore.preview([]))
+        .environmentObject(PetStore.preview())
 }
 
 #Preview("Filled - Dark") {
     Home()
         .environmentObject(AppRouter())
-        .environmentObject(PetStore.preview(HomeViewModel.samplePets))
+        .environmentObject(PetStore.preview())
         .environment(\.colorScheme, .dark)
 }

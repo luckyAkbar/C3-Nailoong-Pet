@@ -5,6 +5,7 @@
 
 import SwiftUI
 import Combine
+import SwiftData
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -19,18 +20,31 @@ final class HomeViewModel: ObservableObject {
         pets.first { $0.id == selectedPetID } ?? pets.first
     }
 
+    static let loadSamplePet: Bool = false
+
     static let samplePets: [Pet3DProfile] = [
         // MARK: - Uncomment this to enable the sample pet for Buncit
-//        Pet3DProfile(
-//             name: "Buncit",
-//             imageName: AppIcon.moli.rawValue,
-//             petDescription: "Buncit was a cheerful orange cat who loved to nap in the sun, until he had to leave too soon after an accident.",
-//             modelFileName: "buncit.usdz"
-//        ),
-//        Pet3DProfile(name: "Moli", imageName: AppIcon.moli.rawValue),
-//        Pet3DProfile(name: "Oyen", imageName: AppIcon.moli.rawValue),
-//        Pet3DProfile(name: "Mochi", imageName: AppIcon.moli.rawValue)
-
-        
+        Pet3DProfile(
+             name: "Buncit",
+             imageName: AppIcon.moli.rawValue,
+             petDescription: "Buncit was a cheerful orange cat who loved to nap in the sun, until he had to leave too soon after an accident.",
+             modelFileName: "buncit.usdz"
+        )
     ]
+    
+    @MainActor
+    static func loadSampleIfNeeded(context: SwiftData.ModelContext) {
+        guard loadSamplePet else { return }
+        
+        let descriptor = SwiftData.FetchDescriptor<Pet3DProfile>()
+        let existingPets = (try? context.fetch(descriptor)) ?? []
+        
+        for sample in samplePets {
+            if !existingPets.contains(where: { $0.name == sample.name }) {
+                context.insert(sample)
+            }
+        }
+        
+        try? context.save()
+    }
 }

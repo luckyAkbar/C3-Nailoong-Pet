@@ -268,6 +268,10 @@ func saveUSDZ(gaussians: Gaussians3D,
     let culledIndices = keepIndices.filter { meanPtr0[$0 * 3 + 2] <= zCutoff }
     let n           = culledIndices.count
 
+    // Metal limits texture width to 32768. Use a ~square layout so texWidth stays well within limits.
+    let texWidth  = min(max(1, Int(ceil(sqrt(Double(n))))), 8192)
+    let texHeight = n == 0 ? 1 : (n + texWidth - 1) / texWidth
+
     let meanPtr     = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
     let colorPtr    = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
 
@@ -292,8 +296,11 @@ func saveUSDZ(gaussians: Gaussians3D,
             255
         ]
 
-        let u  = (Float(splatIdx) + 0.5) / Float(n)
-        let uv = "(\(u), 0.5)"
+        let texX = splatIdx % texWidth
+        let texY = splatIdx / texWidth
+        let u    = (Float(texX) + 0.5) / Float(texWidth)
+        let v    = (Float(texY) + 0.5) / Float(texHeight)
+        let uv   = "(\(u), \(v))"
 
         let base = splatIdx * 4
         points += [
@@ -309,7 +316,11 @@ func saveUSDZ(gaussians: Gaussians3D,
         ]
     }
 
-    let texturePNG = try makePNG(rgbaPixels: texPixels, width: n, height: 1)
+    let totalTexPixels = texWidth * texHeight
+    if totalTexPixels > n {
+        texPixels += [UInt8](repeating: 0, count: (totalTexPixels - n) * 4)
+    }
+    let texturePNG = try makePNG(rgbaPixels: texPixels, width: texWidth, height: texHeight)
 
     let usda = """
     #usda 1.0
@@ -369,24 +380,26 @@ func saveUSDZ(gaussians: Gaussians3D,
 
 private func makePNG(rgbaPixels: [UInt8], width: Int, height: Int) throws -> Data {
     var pixels = rgbaPixels
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    guard let context = CGContext(
-        data: &pixels,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: width * 4,
-        space: colorSpace,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-    ), let cgImage = context.makeImage() else {
-        throw NSError(domain: "SHARP", code: 20,
-                      userInfo: [NSLocalizedDescriptionKey: "Failed to create texture image"])
+    return try pixels.withUnsafeMutableBytes { rawBuffer in
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: rawBuffer.baseAddress,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ), let cgImage = context.makeImage() else {
+            throw NSError(domain: "SHARP", code: 20,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to create texture image"])
+        }
+        guard let pngData = UIImage(cgImage: cgImage).pngData() else {
+            throw NSError(domain: "SHARP", code: 21,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to encode texture PNG"])
+        }
+        return pngData
     }
-    guard let pngData = UIImage(cgImage: cgImage).pngData() else {
-        throw NSError(domain: "SHARP", code: 21,
-                      userInfo: [NSLocalizedDescriptionKey: "Failed to encode texture PNG"])
-    }
-    return pngData
 }
 
 // USDZ-compliant ZIP: each file's content must start at a 64-byte aligned offset

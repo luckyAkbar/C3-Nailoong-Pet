@@ -261,12 +261,7 @@ func saveUSDZ(gaussians: Gaussians3D,
         ? gaussians.decimationIndices(keepRatio: decimation)
         : Array(0..<gaussians.count)
 
-    let meanPtr0    = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
-    let zValues     = keepIndices.map { meanPtr0[$0 * 3 + 2] }
-    let sortedZ     = zValues.sorted()
-    let zCutoff     = sortedZ[sortedZ.count / 4]
-    let culledIndices = keepIndices.filter { meanPtr0[$0 * 3 + 2] <= zCutoff }
-    let n           = culledIndices.count
+    let n = keepIndices.count
 
     // Metal limits texture width to 32768. Use a ~square layout so texWidth stays well within limits.
     let texWidth  = min(max(1, Int(ceil(sqrt(Double(n))))), 8192)
@@ -281,7 +276,7 @@ func saveUSDZ(gaussians: Gaussians3D,
     var uvCoords:    [String] = []
     var texPixels:   [UInt8]  = []
 
-    for (splatIdx, i) in culledIndices.enumerated() {
+    for (splatIdx, i) in keepIndices.enumerated() {
         let x = meanPtr[i * 3 + 0]
         let y = -meanPtr[i * 3 + 1] * 0.5
         let z = -meanPtr[i * 3 + 2] * 2.0
@@ -604,7 +599,7 @@ class SHARPViewModel: ObservableObject {
             let outURL = ScannedModelLibrary.modelURL(for: fileName)
             
             try await Task.detached(priority: .userInitiated) {
-                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
+                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.01)
             }.value
             progressTimer?.cancel()
 

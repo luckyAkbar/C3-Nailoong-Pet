@@ -20,7 +20,7 @@ final class HomeViewModel: ObservableObject {
         pets.first { $0.id == selectedPetID } ?? pets.first
     }
 
-    static let loadSamplePet: Bool = false
+    static let loadSamplePet: Bool = true
 
     static let samplePets: [Pet3DProfile] = [
         // MARK: - Uncomment this to enable the sample pet for Buncit

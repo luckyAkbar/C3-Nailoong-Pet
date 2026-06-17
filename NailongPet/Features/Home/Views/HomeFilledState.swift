@@ -56,7 +56,7 @@ struct HomeFilledState: View {
                 onSelect: onSelect
             )
             .frame(height: 140)
-            .background(Color.surfacePetItem.ignoresSafeArea(edges: .bottom))
+            .background(Color.surfacePrimary.ignoresSafeArea(edges: .bottom))
             .shadow(color: Color.black.opacity(0.25), radius: 5, x: 0, y: -2)
 
         }

@@ -299,13 +299,6 @@ func saveUSDZ(gaussians: Gaussians3D,
     let colorsStr    = vertColors.joined(separator: ", ")
     let faceCountN   = faceCount * 2
 
-    // Trim trailing ", " from each buffer.
-    let pointsJoined  = String(pointsStr.dropLast(2))
-    let uvJoined      = String(uvStr.dropLast(2))
-    let faceIdxJoined = String(faceIdxStr.dropLast(2))
-    // 4 triangles per splat.
-    let faceCounts    = n > 0 ? String(repeating: "3, ", count: n * 4).dropLast(2) : ""
-
     let usda = """
     #usda 1.0
     (
@@ -454,12 +447,6 @@ final class SHARPViewModel: ObservableObject {
                 await MainActor.run { self.errorMessage = error.localizedDescription }
             }
         }
-        // Lower input resolution (1024 vs 1536) to cut CoreML activation memory ~2.25×.
-        let r = try await SHARPModelRunner.loadModel(modelPath: modelURL,
-                                                     inputHeight: 1024,
-                                                     inputWidth: 1024)
-        runner = r
-        return r
     }
 
     private func loadRunnerIfNeeded() async throws -> SHARPModelRunner {

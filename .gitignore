@@ -58,4 +58,5 @@ fastlane/test_output
 iOSInjectionProject/
 .claude/settings.local.json
 # project.pbxproj
-sharp.mlpackage/
+*.mlpackage/
+scripts/*

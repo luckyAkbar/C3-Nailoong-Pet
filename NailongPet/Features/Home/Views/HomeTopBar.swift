@@ -8,26 +8,30 @@ import SwiftUI
 struct HomeTopBar: View {
     /// Saat true, tombol "..." menampilkan menu Edit/Delete (ada pet aktif).
     var showMenu: Bool = false
+    /// toogle to either show triple dots menu or not
+    var showTripleDotsMenu: Bool = true
     var onEdit: () -> Void = {}
     var onDelete: () -> Void = {}
     var onAdd: () -> Void = {}
 
     var body: some View {
         HStack {
-            if showMenu {
-                Menu {
-                    Button(action: onEdit) {
-                        Label("Edit", systemImage: AppIcon.edit.rawValue)
+            if showTripleDotsMenu {
+                if showMenu {
+                    Menu {
+                        Button(action: onEdit) {
+                            Label("Edit", systemImage: AppIcon.edit.rawValue)
+                        }
+                        Button(role: .destructive, action: onDelete) {
+                            Label("Delete", systemImage: AppIcon.delete.rawValue)
+                        }
+                    } label: {
+                        CircleIconLabel(icon: .more)
                     }
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete", systemImage: AppIcon.delete.rawValue)
-                    }
-                } label: {
+                } else {
                     CircleIconLabel(icon: .more)
+                        .opacity(0.5)
                 }
-            } else {
-                CircleIconLabel(icon: .more)
-                    .opacity(0.5)
             }
 
             Spacer()

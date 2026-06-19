@@ -95,7 +95,7 @@ struct LidarCaptureView: View {
 
     private func finish() {
         manager.finishCaptureAndReconstruct()
-        router.navigate(to: .processPage)
+        router.navigate(to: .processPage(GeneratorType.lidar))
     }
 
     private func closeView() {

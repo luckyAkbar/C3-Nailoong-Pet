@@ -2,14 +2,6 @@
 //  USDZPreviewView.swift
 //  NailongPet
 //
-//  Created by carstenz meru phantara on 19/06/26.
-//
-
-
-//
-//  USDZPreviewView.swift
-//  NailongPet
-//
 //  Created by Antigravity on 16/06/26.
 //
 
@@ -22,14 +14,9 @@ struct USDZPreviewView: View {
     private let imageWhitePadding: CGFloat = 12
 
     var body: some View {
-        ZStack {
-            Color.surfacePrimary
-
             TransparentUSDZSceneView(url: url)
                 .padding(8)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
-        .innerShadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+        
         .aspectRatio(1, contentMode: .fit)
         .padding(imageWhitePadding)
         .frame(maxWidth: .infinity)

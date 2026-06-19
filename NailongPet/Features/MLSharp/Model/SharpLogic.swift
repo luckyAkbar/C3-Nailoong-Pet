@@ -519,54 +519,13 @@ final class SHARPViewModel: ObservableObject {
             print("SHARP input MLMultiArray shape: [\(shapeDesc)], dataType: \(imageArray.dataType)")
             state = .processing(0.55, "Building 3D checkpoints...")
 
-            // Try prediction; on failure, attempt fallback runners with smaller input sizes
-            var gaussians: Gaussians3D?
-            do {
-                gaussians = try runner.predict(image: imageArray, focalLengthPx: Float(runner.inputWidth))
-            } catch {
-                print("SHARP initial prediction failed: \(error.localizedDescription). Attempting fallback sizes...")
-                var lastError: Error = error
-                let fallbackSizes = [1024, 768]
-                for size in fallbackSizes {
-                    guard let modelURL = modelURL else { break }
-                    var sizeLastError: Error? = nil
-                    // Use CPU-only runtime to avoid GPU/Metal execution-plan failures.
-                    let unitsToTry: [MLComputeUnits] = [.cpuOnly]
-                    for units in unitsToTry {
-                        do {
-                            print("SHARP retry: creating runner with size=\(size), computeUnits=\(units)")
-                            let altRunner = try SHARPModelRunner(modelPath: modelURL, inputHeight: size, inputWidth: size, computeUnits: units)
-                            let altImage = try altRunner.preprocessImage(from: uiImage)
-                            let shapeDesc2 = altImage.shape.map { "\($0)" }.joined(separator: ",")
-                            print("SHARP alt input MLMultiArray shape: [\(shapeDesc2)], dataType: \(altImage.dataType)")
-                            gaussians = try altRunner.predict(image: altImage, focalLengthPx: Float(size))
-                            // success — adopt altRunner for future calls
-                            await MainActor.run {
-                                self.runner = altRunner
-                            }
-                            break
-                        } catch let nserr as NSError {
-                            print("SHARP retry size=\(size) units=\(units) failed: code=\(nserr.code) domain=\(nserr.domain) userInfo=\(nserr.userInfo)")
-                            sizeLastError = nserr
-                            lastError = nserr
-                        } catch {
-                            print("SHARP retry size=\(size) units=\(units) failed: \(error.localizedDescription)")
-                            sizeLastError = error
-                            lastError = error
-                        }
-                    }
-                    if gaussians != nil { break }
-                }
-
-                if gaussians == nil {
-                    throw lastError
-                }
-            }
+            // Predict with the model (requires 1536x1536 input)
+            let gaussians = try runner.predict(image: imageArray, focalLengthPx: Float(runner.inputWidth))
 
             state = .processing(0.75, "Saving 3D model...")
             let outputFileName = "model-\(UUID().uuidString).usdz"
             let outURL = ScannedModelLibrary.modelURL(for: outputFileName)
-            try saveUSDZ(gaussians: gaussians!, to: outURL, decimation: 0.5)
+            try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
 
             usdzURL = outURL
             state = .processing(0.99, "Finalizing 3D model...")

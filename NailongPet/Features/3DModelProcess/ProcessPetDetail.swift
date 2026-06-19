@@ -2,8 +2,6 @@
 //  ProcessPetDetail.swift
 //  NailongPet
 //
-//  Created by carstenz meru phantara on 08/06/26.
-//
 
 import SwiftUI
 
@@ -11,21 +9,26 @@ struct ProcessPetDetail: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
-    @EnvironmentObject private var petStore: PetStore
     @EnvironmentObject private var sharpViewModel: SHARPViewModel
+    @EnvironmentObject private var petStore: PetStore
 
-    var generatorType: GeneratorType = .lidar
+    private enum Field {
+        case name
+        case description
+    }
 
-    init(generatorType: GeneratorType = .lidar) {
+    var generatorType: GeneratorType
+
+    init(generatorType: GeneratorType) {
         self.generatorType = generatorType
     }
 
     @State private var petName: String = ""
     @State private var petDescription: String = ""
+    @FocusState private var focusedField: Field?
 
     private var isFormEmpty: Bool {
-        petName.trimmingCharacters(in: .whitespaces).isEmpty ||
-        petDescription.trimmingCharacters(in: .whitespaces).isEmpty
+        petName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var pet: Pet3DProfile = Pet3DProfile(
@@ -38,9 +41,15 @@ struct ProcessPetDetail: View {
         case .lidar:
             return manager.modelURL
         case .mlSharp:
-            if case .completed(let url) = sharpViewModel.state { return url }
+            if case .completed(let url) = sharpViewModel.state {
+                return url
+            }
             return nil
         }
+    }
+
+    private var placeholderModelURL: URL? {
+        Bundle.main.url(forResource: "buncit", withExtension: "usdz")
     }
 
     private func savePet() {
@@ -58,67 +67,67 @@ struct ProcessPetDetail: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: 24) {
                 // MARK: Pet preview card
                 Group {
                     if let url = modelURL {
+                        USDZPreviewView(url: url)
+                    } else if let url = placeholderModelURL {
                         USDZPreviewView(url: url)
                     } else {
                         PetProfilePhoto(pet: pet)
                     }
                 }
-                .frame(width: 260, height: 260)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous))
+                .frame(maxWidth: .infinity)
                 .padding(.top, 32)
 
-                // Name field
-                VStack(spacing: 0) {
-                    TextField("Name", text: $petName)
-                        .font(.title2Bold)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.textPrimary)
-                        .padding(.bottom, 8)
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundStyle(Color.textTertiary.opacity(0.4))
-                }
-                .padding(.horizontal, 60)
-                .padding(.top, 24)
+                VStack(spacing: 20) {
+                    VStack(spacing: 0) {
+                        TextField("Name", text: $petName)
+                            .focused($focusedField, equals: .name)
+                            .font(.title2Bold)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                    .padding(.horizontal, 24)
 
-                // Description field
-                VStack(alignment: .leading, spacing: 0) {
-                    TextField("Add a description about your pet...", text: $petDescription, axis: .vertical)
-                        .font(.subheadRegular)
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(5, reservesSpace: true)
-                        .tint(Color.brandPrimary)
+                    VStack(spacing: 0) {
+                        TextField("Description", text: $petDescription, axis: .vertical)
+                            .focused($focusedField, equals: .description)
+                            .font(.subheadRegular)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.textPrimary)
+                            .lineLimit(5, reservesSpace: true)
+                            .tint(Color.brandPrimary)
+                    }
+                    .padding(.horizontal, 24)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.surfacePrimary)
+                .padding(20)
+                .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous).strokeBorder(Color.textTertiary.opacity(0.2), lineWidth: 0.5))
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
 
-                // Save button
                 Button(action: savePet) {
-                    Text("Save")
+                    Text("Next")
                         .font(.subheadBold)
                         .foregroundColor(isFormEmpty ? .textTertiary : .onBrand)
-                        .frame(width: 160, height: 50)
-                        .background(isFormEmpty ? Color.surfacePrimary : Color.brandPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 55)
+                        .background(isFormEmpty ? Color.surfacePetItem: Color.brandPrimary)
                         .clipShape(Capsule())
-                        .overlay(Capsule().strokeBorder(Color.textTertiary.opacity(isFormEmpty ? 0.25 : 0), lineWidth: 0.5))
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.textTertiary.opacity(isFormEmpty ? 0.25 : 0), lineWidth: 0.5)
+                        )
                 }
                 .disabled(isFormEmpty)
-                .padding(.top, 28)
-                .padding(.bottom, 40)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
-            .onTapGesture { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+            .onTapGesture {
+                focusedField = nil
+            }
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Color.surfaceCanvas.ignoresSafeArea())
@@ -128,8 +137,11 @@ struct ProcessPetDetail: View {
 }
 
 #Preview {
-    ProcessPetDetail()
-        .environmentObject(AppRouter())
-        .environmentObject(LidarCaptureManager())
-        .environmentObject(PetStore())
+    NavigationStack {
+        ProcessPetDetail(generatorType: .mlSharp)
+            .environmentObject(AppRouter())
+            .environmentObject(LidarCaptureManager())
+            .environmentObject(SHARPViewModel())
+            .environmentObject(PetStore())
+    }
 }

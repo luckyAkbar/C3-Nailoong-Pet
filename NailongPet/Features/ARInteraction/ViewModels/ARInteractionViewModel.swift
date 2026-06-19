@@ -10,11 +10,37 @@ class ARInteractionViewModel: ObservableObject {
     private var defaultShowInstructionCard: Bool = true
     
     let pet: Pet3DProfile
+    let speechRecognizer = SpeechRecognizer()
+    let voiceTriggerEvent = PassthroughSubject<Void, Never>()
+    private var cancellables = Set<AnyCancellable>()
+    
     private var hasShownPostRenderInstructions = false
     private let instructionDelay: TimeInterval = 5.0
     
     init(pet: Pet3DProfile) {
         self.pet = pet
+        setupSpeechObservation()
+    }
+    
+    private func setupSpeechObservation() {
+        speechRecognizer.$transcript
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self] text in
+                guard let self = self, !text.isEmpty else { return }
+                
+                // Cek apakah transkrip mengandung nama pet
+                if text.lowercased().contains(self.pet.name.lowercased()) {
+                    print("ARInteractionViewModel: Pet name '\(self.pet.name)' detected!")
+                    self.voiceTriggerEvent.send()
+                    
+                    // Restart listening to clear transcript
+                    self.speechRecognizer.stopTranscribing()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.speechRecognizer.startTranscribing()
+                    }
+                }
+            }
+            .store(in: &cancellables)
     }
     
     func onModelRendered() {

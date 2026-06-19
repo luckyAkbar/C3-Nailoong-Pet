@@ -25,6 +25,30 @@ struct ARInteractionScreen: View {
                     Spacer()   
                 }
             }
+            
+            VStack {
+                Spacer()
+                if viewModel.speechRecognizer.isListening {
+                    HStack(spacing: 8) {
+                        Image(systemName: "mic.fill")
+                            .foregroundColor(.white)
+//                        Text("Listening for \\",\\(viewModel.pet.name)\\"...")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.6))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 40)
+                }
+            }
+        }
+        .onAppear {
+            viewModel.speechRecognizer.startTranscribing()
+        }
+        .onDisappear {
+            viewModel.speechRecognizer.stopTranscribing()
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

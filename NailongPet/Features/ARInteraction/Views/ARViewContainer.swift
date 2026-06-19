@@ -72,6 +72,14 @@ struct ARViewContainer: UIViewRepresentable {
         
         init(viewModel: ARInteractionViewModel) {
             self.viewModel = viewModel
+            super.init()
+            
+            self.viewModel.voiceTriggerEvent
+                .receive(on: RunLoop.main)
+                .sink { [weak self] in
+                    self?.triggerVoiceReaction()
+                }
+                .store(in: &cancellables)
         }
         
         func setupAnchoredSubscription(arView: ARView, anchor: AnchorEntity) {
@@ -136,6 +144,43 @@ struct ARViewContainer: UIViewRepresentable {
                     }
                 } catch {
                     // Ignore dropped frames.
+                }
+            }
+        }
+        
+        func triggerVoiceReaction() {
+            guard !isPetting else { return }
+            isPetting = true
+            lastPetTime = Date()
+
+            guard let entity = petEntity else { return }
+
+            if originalScale == nil {
+                originalScale = entity.scale
+            }
+            
+            guard let baseScale = originalScale else { return }
+
+            // Voice reaction: jump and rotate slightly
+            let jumpAction = Transform(
+                scale: baseScale * reactionScaleFactor,
+                rotation: simd_quatf(angle: .pi / 4, axis: SIMD3<Float>(0, 1, 0)),
+                translation: entity.transform.translation + SIMD3<Float>(0, 0.1, 0)
+            )
+            
+            let originalTransform = Transform(
+                scale: baseScale,
+                rotation: simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0)),
+                translation: entity.transform.translation
+            )
+
+            entity.move(to: jumpAction, relativeTo: entity.parent, duration: 0.3, timingFunction: .easeOut)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                entity.move(to: originalTransform, relativeTo: entity.parent, duration: 0.3, timingFunction: .easeIn)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.isPetting = false
                 }
             }
         }

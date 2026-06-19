@@ -36,7 +36,7 @@ struct OnboardingPageView: View {
                 
                 if isLastPage {
                     Button(action: onNext) {
-                        Text("Next")
+                        Text("Start")
                             .font(.body)
                             .foregroundColor(.textPrimary)
                             .frame(width: 320, height: 55)
@@ -45,7 +45,7 @@ struct OnboardingPageView: View {
                     }
                 } else {
                     Button(action: onNext) {
-                        Text("Start")
+                        Text("Next")
                             .font(.body)
                             .foregroundColor(.textPrimary)
                             .frame(width: 320, height: 55)

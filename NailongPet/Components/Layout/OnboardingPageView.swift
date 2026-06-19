@@ -26,7 +26,7 @@ struct OnboardingPageView: View {
             
             VStack(spacing: 52) {
                 VStack {
-                    Image(systemName: iconName)
+                    Image(iconName)
                         .resizable()
                         .scaledToFit()
                         .frame(height: 180)

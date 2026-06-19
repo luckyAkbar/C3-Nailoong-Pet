@@ -21,7 +21,7 @@ struct OnboardingScreen: View {
                     OnboardingPageView(
                         title: "Create Their Presence",
                         description: "Some memories never truly leave. Bring them close again through familiar sounds and shared moments.",
-                        iconName: AppIcon.pawPrint,
+                        iconName: AppIcon.firstOnboardingImg.rawValue,
                         isLastPage: false,
                         onSkip: { viewModel.skip() },
                         onNext: { viewModel.next() }
@@ -31,7 +31,7 @@ struct OnboardingScreen: View {
                     OnboardingPageView(
                         title: "Begin Your First Moment",
                         description: "We use AR to recreate your pet in 3D. Camera and photo access help bring those memories to life. If your pet is nearby, a quick scan can create a more lifelike companion.",
-                        iconName: "camera.fill",
+                        iconName: AppIcon.secondOnboardingImg.rawValue,
                         isLastPage: true,
                         onSkip: { viewModel.skip() },
                         onNext: { viewModel.next() }

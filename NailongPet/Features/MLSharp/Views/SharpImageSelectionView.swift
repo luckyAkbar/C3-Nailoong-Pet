@@ -17,11 +17,10 @@ struct SharpImageSelectionView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
+            ZStack{
                 PhotosPicker(selection: $selectedItem, matching: .images) {
                     selectionCard
-                        .frame(maxWidth: .infinity)
-                        .frame(height: max(geometry.size.height * 0.76, 560))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 20)
@@ -36,30 +35,37 @@ struct SharpImageSelectionView: View {
                         }
                     }
                 }
-
-                Button(action: {
-                    if let uiImage = sharpViewModel.selectedImage {
-                        Task {
-                            await sharpViewModel.process(uiImage: uiImage)
+                VStack{
+                    Spacer()
+                    
+                    Button(action: {
+                        if let uiImage = sharpViewModel.selectedImage {
+                            Task {
+                                await sharpViewModel.process(uiImage: uiImage)
+                            }
+                            router.navigate(to: .processPage(.mlSharp))
                         }
-                        router.navigate(to: .processPage(.mlSharp))
+                    }) {
+                        Text("Create 3D")
+                            .font(.subheadBold)
+                            .foregroundColor(sharpViewModel.selectedImage != nil ? .textPrimary : Color.white.opacity(0.5))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(
+                                sharpViewModel.selectedImage != nil
+                                    ? Color.surfaceCard        // neutral brown/gray when active
+                                    : Color.brandPrimary.opacity(0.4)  // muted when disabled
+                            )
+                            .clipShape(Capsule())
+                            .padding(.horizontal, 100)
+                            .padding(.bottom, 24)
                     }
-                }) {
-                    Text("Create 3D")
-                        .font(.subheadBold)
-                        .foregroundColor(sharpViewModel.selectedImage != nil ? .textPrimary : Color.white.opacity(0.5))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(
-                            sharpViewModel.selectedImage != nil
-                                ? Color.surfaceCard        // neutral brown/gray when active
-                                : Color.brandPrimary.opacity(0.4)  // muted when disabled
-                        )
-                        .clipShape(Capsule())
+                    .disabled(sharpViewModel.selectedImage == nil)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
-                .disabled(sharpViewModel.selectedImage == nil)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
+                
+                
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(backgroundLayer.ignoresSafeArea())

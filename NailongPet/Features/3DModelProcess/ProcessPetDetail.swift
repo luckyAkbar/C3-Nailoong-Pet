@@ -48,6 +48,10 @@ struct ProcessPetDetail: View {
         }
     }
 
+    private var placeholderModelURL: URL? {
+        Bundle.main.url(forResource: "buncit", withExtension: "usdz")
+    }
+
     private func savePet() {
         guard let url = modelURL else { return }
         petStore.add(
@@ -63,64 +67,52 @@ struct ProcessPetDetail: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: 24) {
                 // MARK: Pet preview card
                 Group {
                     if let url = modelURL {
+                        USDZPreviewView(url: url)
+                    } else if let url = placeholderModelURL {
                         USDZPreviewView(url: url)
                     } else {
                         PetProfilePhoto(pet: pet)
                     }
                 }
-                .frame(width: 260, height: 260)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous))
+                .frame(maxWidth: .infinity)
                 .padding(.top, 32)
 
-                // MARK: Name field
-                VStack(spacing: 0) {
-                    TextField("Name", text: $petName)
-                        .focused($focusedField, equals: .name)
-                        .font(.title2Bold)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.textPrimary)
-                        .padding(.bottom, 8)
+                VStack(spacing: 20) {
+                    VStack(spacing: 0) {
+                        TextField("Name", text: $petName)
+                            .focused($focusedField, equals: .name)
+                            .font(.title2Bold)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                    .padding(.horizontal, 24)
 
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundStyle(Color.textTertiary.opacity(0.4))
+                    VStack(spacing: 0) {
+                        TextField("Description", text: $petDescription, axis: .vertical)
+                            .focused($focusedField, equals: .description)
+                            .font(.subheadRegular)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.textPrimary)
+                            .lineLimit(5, reservesSpace: true)
+                            .tint(Color.brandPrimary)
+                    }
+                    .padding(.horizontal, 24)
                 }
-                .padding(.horizontal, 60)
-                .padding(.top, 24)
-
-                // MARK: Description field
-                VStack(alignment: .leading, spacing: 0) {
-                    TextField("Add a description about your pet...", text: $petDescription, axis: .vertical)
-                        .focused($focusedField, equals: .description)
-                        .font(.subheadRegular)
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(5, reservesSpace: true)
-                        .tint(Color.brandPrimary)
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.surfacePrimary)
+                .padding(20)
+                .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.medium.value, style: .continuous)
-                        .strokeBorder(Color.textTertiary.opacity(0.2), lineWidth: 0.5)
-                )
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
-                
-                
-                // MARK: Save button
+
                 Button(action: savePet) {
-                    Text("Save")
+                    Text("Next")
                         .font(.subheadBold)
                         .foregroundColor(isFormEmpty ? .textTertiary : .onBrand)
-                        .frame(width: 160, height: 50)
-                        .background(isFormEmpty ? Color.surfacePrimary : Color.brandPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 55)
+                        .background(isFormEmpty ? Color.surfacePetItem: Color.brandPrimary)
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
@@ -128,10 +120,10 @@ struct ProcessPetDetail: View {
                         )
                 }
                 .disabled(isFormEmpty)
-                .padding(.top, 28)
-                .padding(.bottom, 40)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture {
                 focusedField = nil
@@ -146,7 +138,7 @@ struct ProcessPetDetail: View {
 
 #Preview {
     NavigationStack {
-        ProcessPetDetail(generatorType: .lidar)
+        ProcessPetDetail(generatorType: .mlSharp)
             .environmentObject(AppRouter())
             .environmentObject(LidarCaptureManager())
             .environmentObject(SHARPViewModel())

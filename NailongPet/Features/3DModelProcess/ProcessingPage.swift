@@ -277,7 +277,7 @@ struct ProcessPage: View {
                     .font(.subheadRegular)
                     .foregroundStyle(.white)
                     .frame(maxWidth: 184, minHeight: 55)
-                    .background(Color.scrim)
+                    .background(Color.brandPrimary)
                     .clipShape(Capsule())
                     .padding(.horizontal, 40)
             }
@@ -375,9 +375,26 @@ struct ScanFrame: Shape {
     }
 }
 
-#Preview("Processing") {
-    ProcessPage(generatorType: .lidar)
+@MainActor
+private func processingPreview(progressPercent: Float) -> some View {
+    let manager = LidarCaptureManager()
+    manager.reconstructionProgress = progressPercent / 100
+    manager.state = progressPercent >= 100 ? .completed : .reconstructing
+
+    return ProcessPage(generatorType: .lidar)
         .environmentObject(AppRouter())
-        .environmentObject(LidarCaptureManager())
+        .environmentObject(manager)
         .environmentObject(SHARPViewModel())
+}
+
+#Preview("Processing 0%") {
+    processingPreview(progressPercent: 0)
+}
+
+#Preview("Processing 50%") {
+    processingPreview(progressPercent: 50)
+}
+
+#Preview("Processing 100%") {
+    processingPreview(progressPercent: 100)
 }

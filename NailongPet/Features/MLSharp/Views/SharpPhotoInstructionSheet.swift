@@ -35,9 +35,10 @@ struct SharpPhotoInstructionSheet: View {
             Spacer()
 
             // MARK: - Illustration
-            AppIcon.photoSearch.image
+            Image(AppIcon.assetPickPhotoSvg.rawValue)
                 .resizable()
                 .scaledToFit()
+                .scaleEffect(2)
                 .frame(height: 160)
                 .foregroundColor(.textPrimary)
 
@@ -49,9 +50,15 @@ struct SharpPhotoInstructionSheet: View {
                     .font(.title2Bold)
                     .foregroundColor(.textPrimary)
 
-                Text("To ensure the highest quality 3D model, please prepare a clean photo of your pet with bright, even lighting, making sure their entire body is fully visible from a slightly high angle.")
+                Text("""
+                    To ensure the highest quality 3D model, please prepare:
+                     •     Use a clear photo with bright, even lighting.
+                     •     Make sure your pet's entire body is visible.
+                     •     Capture them from a slightly elevated angle.
+                     •     Avoid blurry, dark, or cropped photos.
+                    """)
                     .font(.footnoteRegular)
-                    .foregroundColor(Color.textPrimary.opacity(0.8))
+                    .foregroundColor(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 20)
@@ -78,7 +85,6 @@ struct SharpPhotoInstructionSheet: View {
 
 #Preview {
     ZStack {
-        Color.white.ignoresSafeArea()
         SharpPhotoInstructionSheet()
     }
 }

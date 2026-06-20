@@ -24,6 +24,7 @@ struct Home: View {
         VStack(spacing: 0) {
             HomeTopBar(
                 showMenu: !pets.isEmpty,
+                showTripleDotsMenu: !pets.isEmpty,
                 onEdit: {
                     if let selected {
                         router.navigate(to: .petDetail(selected))

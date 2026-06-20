@@ -35,10 +35,11 @@ struct LidarScanningInstructionSheet: View {
             Spacer()
 
             // MARK: - Illustration
-            AppIcon.moli.image
+            Image(AppIcon.assetScanLidarSvg.rawValue)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 180)
+                .scaleEffect(2)
+                .frame(height: 160)
                 .foregroundColor(.textPrimary)
 
             Spacer()

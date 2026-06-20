@@ -42,6 +42,8 @@ enum AppIcon: String {
     //asset collection
     case firstOnboardingImg = "AssetOnboardingSatu"
     case secondOnboardingImg = "AssetOnboardingDua"
+    case assetPickPhotoSvg = "AssetPickPhoto"
+    case assetScanLidarSvg = "AssetPetScanning"
     
     /// Properti pembantu untuk langsung mengeluarkan komponen Image siap pakai.
     /// Case .moli menggunakan Image asset, sisanya SF Symbol.

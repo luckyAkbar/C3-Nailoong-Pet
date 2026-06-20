@@ -8,12 +8,17 @@
 
 import Foundation
 
+enum GeneratorType: Hashable {
+    case lidar
+    case mlSharp
+}
+
 enum AppRoute: Hashable {
     case choose3DGeneratorTech
     case mlSharp
     case lidar
-    case processPage
-    case processPetDetail
+    case processPage(GeneratorType)
+    case processPetDetail(GeneratorType)
     case pet3DGallery
     case petDetail(Pet3DProfile)   // associated value: data pet yang dipilih
     case arInteraction(Pet3DProfile)

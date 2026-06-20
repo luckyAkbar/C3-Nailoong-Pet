@@ -8,14 +8,15 @@ import SwiftUI
 
 struct BrandButton: View {
     var text : String = ""
+    var isEnabled: Bool = true
     
     var body: some View {
         Text(text)
             .font(.subheadRegular) // Token Font
-            .foregroundColor(.whitePrimarySurface) // Token Warna
+            .foregroundColor(isEnabled ? .whitePrimarySurface : .blackPrimaryText) // Token Warna
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color.orangePrimaryBrand) // Token Warna
+            .background(isEnabled ? Color.orangePrimaryBrand : Color.grayDisabledAction.opacity(0.5)) // Token Warna
             .cornerRadius(CornerRadius.full.value) // Token Radius (Pill)
             .padding(.horizontal, 40)
             .padding(.bottom, 34) // Memberikan jarak aman dari home indicator iPhone

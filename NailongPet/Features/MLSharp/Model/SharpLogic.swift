@@ -1,0 +1,548 @@
+//
+//  SHARPModelRunner_iOS.swift
+//  SHARP Model Inference — iOS / SwiftUI
+//
+//  Drop this file into your Xcode iOS project.
+//  Add your .mlpackage to the bundle (drag into Xcode, tick "Add to target").
+//  Add to Info.plist:
+//    NSCameraUsageDescription      → "Used for AR placement"
+//    NSPhotoLibraryUsageDescription → "Select a photo to reconstruct in 3D"
+
+import SwiftUI
+import PhotosUI
+import CoreML
+import CoreImage
+import UIKit          // ← replaces AppKit
+//import RealityKit
+import Combine
+
+// MARK: - Gaussians3D
+
+struct Gaussians3D {
+    let meanVectors:    MLMultiArray   // (1, N, 3) positions
+    let singularValues: MLMultiArray   // (1, N, 3) scales
+    let quaternions:    MLMultiArray   // (1, N, 4) rotations
+    let colors:         MLMultiArray   // (1, N, 3) linear RGB
+    let opacities:      MLMultiArray   // (1, N)    opacity
+
+    var count: Int { meanVectors.shape[1].intValue }
+
+    func computeImportanceScores() -> [Float] {
+        let n = count
+        var scores = [Float](repeating: 0, count: n)
+        let scalePtr   = singularValues.dataPointer.assumingMemoryBound(to: Float.self)
+        let opacityPtr = opacities.dataPointer.assumingMemoryBound(to: Float.self)
+        for i in 0..<n {
+            let s0 = scalePtr[i * 3 + 0]
+            let s1 = scalePtr[i * 3 + 1]
+            let s2 = scalePtr[i * 3 + 2]
+            scores[i] = s0 * s1 * s2 * opacityPtr[i]
+        }
+        return scores
+    }
+
+    func decimationIndices(keepRatio: Float) -> [Int] {
+        let keepCount = max(1, Int(Float(count) * keepRatio))
+        var indexedScores = computeImportanceScores().enumerated().map { ($0.offset, $0.element) }
+        indexedScores.sort { $0.1 > $1.1 }
+        var keep = indexedScores.prefix(keepCount).map { $0.0 }
+        keep.sort()
+        return keep
+    }
+}
+
+// MARK: - Color Utilities
+
+func linearRGBToSRGB(_ v: Float) -> Float {
+    v <= 0.0031308 ? v * 12.92 : 1.055 * pow(v, 1.0 / 2.4) - 0.055
+}
+
+func rgbToSphericalHarmonics(_ rgb: Float) -> Float {
+    (rgb - 0.5) / sqrt(1.0 / (4.0 * Float.pi))
+}
+
+func inverseSigmoid(_ x: Float) -> Float {
+    let c = min(max(x, 1e-6), 1.0 - 1e-6)
+    return log(c / (1.0 - c))
+}
+
+// MARK: - SHARP Model Runner
+
+class SHARPModelRunner {
+    private let model: MLModel
+    private let inputHeight: Int
+    private let inputWidth:  Int
+
+    init(modelPath: URL, inputHeight: Int = 1536, inputWidth: Int = 1536) throws {
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuOnly
+
+        let compiled = try SHARPModelRunner.compileIfNeeded(at: modelPath)
+        self.model       = try MLModel(contentsOf: compiled, configuration: config)
+        self.inputHeight = inputHeight
+        self.inputWidth  = inputWidth
+
+        print("Inputs:  \(model.modelDescription.inputDescriptionsByName.keys.joined(separator: ", "))")
+        print("Outputs: \(model.modelDescription.outputDescriptionsByName.keys.joined(separator: ", "))")
+    }
+
+    // MARK: Compile
+
+    private static func compileIfNeeded(at modelPath: URL) throws -> URL {
+        let fm  = FileManager.default
+        let ext = modelPath.pathExtension.lowercased()
+
+        if ext == "mlmodelc" { return modelPath }
+
+        guard ext == "mlpackage" || ext == "mlmodel" else {
+            throw NSError(domain: "SHARP", code: 10,
+                          userInfo: [NSLocalizedDescriptionKey: "Unsupported format: \(ext)"])
+        }
+
+        let cacheDir = fm.temporaryDirectory.appendingPathComponent("SHARPModelCache")
+        try? fm.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+
+        let modelName    = modelPath.deletingPathExtension().lastPathComponent
+        let compiledPath = cacheDir.appendingPathComponent("\(modelName).mlmodelc")
+
+        if fm.fileExists(atPath: compiledPath.path) {
+            let srcDate    = (try? fm.attributesOfItem(atPath: modelPath.path))?[.modificationDate] as? Date
+            let cachedDate = (try? fm.attributesOfItem(atPath: compiledPath.path))?[.modificationDate] as? Date
+            if let s = srcDate, let c = cachedDate, c >= s {
+                print("Using cached compiled model.")
+                return compiledPath
+            }
+            try? fm.removeItem(at: compiledPath)
+        }
+
+        print("Compiling model…")
+        let t   = CFAbsoluteTimeGetCurrent()
+        let tmp = try MLModel.compileModel(at: modelPath)
+        print("✓ Compiled in \(String(format: "%.1f", CFAbsoluteTimeGetCurrent() - t))s")
+
+        try? fm.removeItem(at: compiledPath)
+        try  fm.moveItem(at: tmp, to: compiledPath)
+        return compiledPath
+    }
+
+    // MARK: Preprocess — UIImage instead of NSImage
+
+    /// Accepts a UIImage picked from PhotosPicker or the camera roll.
+    func preprocessImage(from uiImage: UIImage) throws -> MLMultiArray {
+        guard let cgImage = uiImage.cgImage else {
+            throw NSError(domain: "SHARP", code: 2,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to get CGImage from UIImage"])
+        }
+
+        // Resize via CIImage (same pipeline as the original script)
+        let ciImage  = CIImage(cgImage: cgImage)
+        let context  = CIContext()
+        let scaleX   = CGFloat(inputWidth)  / ciImage.extent.width
+        let scaleY   = CGFloat(inputHeight) / ciImage.extent.height
+        let scaled   = ciImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+
+        guard let resized = context.createCGImage(scaled,
+                                                   from: CGRect(x: 0, y: 0,
+                                                                width: inputWidth,
+                                                                height: inputHeight)) else {
+            throw NSError(domain: "SHARP", code: 3,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to resize image"])
+        }
+
+        // (1, 3, H, W) float32 array
+        let imageArray = try MLMultiArray(
+            shape: [1, 3,
+                    NSNumber(value: inputHeight),
+                    NSNumber(value: inputWidth)],
+            dataType: .float32)
+
+        let bytesPerPixel = 4
+        let bytesPerRow   = bytesPerPixel * inputWidth
+        var pixelData     = [UInt8](repeating: 0, count: inputHeight * bytesPerRow)
+
+        let cs = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data:             &pixelData,
+                                  width:            inputWidth,
+                                  height:           inputHeight,
+                                  bitsPerComponent: 8,
+                                  bytesPerRow:      bytesPerRow,
+                                  space:            cs,
+                                  bitmapInfo:       CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            throw NSError(domain: "SHARP", code: 4,
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to create bitmap context"])
+        }
+        ctx.draw(resized, in: CGRect(x: 0, y: 0, width: inputWidth, height: inputHeight))
+
+        let ptr           = imageArray.dataPointer.assumingMemoryBound(to: Float.self)
+        let channelStride = inputHeight * inputWidth
+
+        for y in 0..<inputHeight {
+            for x in 0..<inputWidth {
+                let pi = y * bytesPerRow + x * bytesPerPixel
+                let si = y * inputWidth  + x
+                ptr[0 * channelStride + si] = Float(pixelData[pi])     / 255.0
+                ptr[1 * channelStride + si] = Float(pixelData[pi + 1]) / 255.0
+                ptr[2 * channelStride + si] = Float(pixelData[pi + 2]) / 255.0
+            }
+        }
+
+        return imageArray
+    }
+
+    // MARK: Predict
+
+    func predict(image: MLMultiArray, focalLengthPx: Float) throws -> Gaussians3D {
+        let disparityFactor  = focalLengthPx / Float(inputWidth)
+        let disparityArray   = try MLMultiArray(shape: [1], dataType: .float32)
+        disparityArray[0]    = NSNumber(value: disparityFactor)
+
+        let inputFeatures = try MLDictionaryFeatureProvider(dictionary: [
+            "image":            MLFeatureValue(multiArray: image),
+            "disparity_factor": MLFeatureValue(multiArray: disparityArray)
+        ])
+
+        let output      = try model.prediction(from: inputFeatures)
+        let outputNames = Array(model.modelDescription.outputDescriptionsByName.keys)
+
+        func find(_ keywords: [String]) -> MLMultiArray? {
+            for name in outputNames {
+                let lower = name.lowercased()
+                if keywords.contains(where: { lower.contains($0.lowercased()) }) {
+                    return output.featureValue(for: name)?.multiArrayValue
+                }
+            }
+            return nil
+        }
+
+        let meanVectors    = output.featureValue(for: "mean_vectors_3d_positions")?.multiArrayValue    ?? find(["mean",     "position", "xyz"])
+        let singularValues = output.featureValue(for: "singular_values_scales")?.multiArrayValue      ?? find(["singular", "scale"])
+        let quaternions    = output.featureValue(for: "quaternions_rotations")?.multiArrayValue       ?? find(["quaternion","rotation", "rot"])
+        let colors         = output.featureValue(for: "colors_rgb_linear")?.multiArrayValue           ?? find(["color",    "rgb"])
+        let opacities      = output.featureValue(for: "opacities_alpha_channel")?.multiArrayValue     ?? find(["opacity",  "alpha"])
+
+        // Fallback: use sorted output order if name matching fails
+        if meanVectors == nil || singularValues == nil || quaternions == nil || colors == nil || opacities == nil {
+            let sorted = outputNames.sorted()
+            guard sorted.count >= 5,
+                  let mv = output.featureValue(for: sorted[0])?.multiArrayValue,
+                  let sv = output.featureValue(for: sorted[1])?.multiArrayValue,
+                  let q  = output.featureValue(for: sorted[2])?.multiArrayValue,
+                  let c  = output.featureValue(for: sorted[3])?.multiArrayValue,
+                  let o  = output.featureValue(for: sorted[4])?.multiArrayValue else {
+                throw NSError(domain: "SHARP", code: 5,
+                              userInfo: [NSLocalizedDescriptionKey: "Cannot extract outputs. Available: \(outputNames)"])
+            }
+            print("Using outputs by sorted order: \(sorted)")
+            return Gaussians3D(meanVectors: mv, singularValues: sv, quaternions: q, colors: c, opacities: o)
+        }
+
+        return Gaussians3D(meanVectors: meanVectors!,
+                           singularValues: singularValues!,
+                           quaternions: quaternions!,
+                           colors: colors!,
+                           opacities: opacities!)
+    }
+}
+
+// MARK: - Save as USDZ (iOS-compatible, no export() needed)
+
+func saveUSDZ(gaussians: Gaussians3D,
+              to outputPath: URL,
+              decimation: Float = 1.0) throws {
+
+    let keepIndices = decimation < 1.0
+        ? gaussians.decimationIndices(keepRatio: decimation)
+        : Array(0..<gaussians.count)
+    
+    // ── Depth culling: keep only the front half of the scene ─────────────
+    let meanPtr0 = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let zValues  = keepIndices.map { meanPtr0[$0 * 3 + 2] }   // raw Z before remap
+    let sortedZ  = zValues.sorted()
+    let zCutoff  = sortedZ[sortedZ.count / 4]                  // median = front 50%
+
+    // Keep only splats with Z ≤ median (closer to camera)
+    let culledIndices = keepIndices.filter { meanPtr0[$0 * 3 + 2] <= zCutoff }
+
+    let meanPtr  = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
+    let colorPtr = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
+
+    let s: Float = 0.003
+    var points:      [String] = []
+    var faceIndices: [String] = []
+    var vertColors:  [String] = []
+    var faceCount = 0
+
+    for i in culledIndices {
+        let x = meanPtr[i * 3 + 0]
+        let y = -meanPtr[i * 3 + 1] * 0.5
+        let z = -meanPtr[i * 3 + 2] * 2.0
+
+        let r = linearRGBToSRGB(colorPtr[i * 3 + 0])
+        let g = linearRGBToSRGB(colorPtr[i * 3 + 1])
+        let b = linearRGBToSRGB(colorPtr[i * 3 + 2])
+        let col = "(\(r), \(g), \(b))"
+
+        let base = faceCount * 4
+        points += [
+            "(\(x-s), \(y+s), \(z))",
+            "(\(x+s), \(y+s), \(z))",
+            "(\(x+s), \(y-s), \(z))",
+            "(\(x-s), \(y-s), \(z))",
+        ]
+        vertColors += [col, col, col, col]
+        faceIndices += ["\(base), \(base+1), \(base+2)", "\(base), \(base+2), \(base+3)"]
+        faceCount += 1
+    }
+
+    let pointsStr    = points.joined(separator: ", ")
+    let facesStr     = faceIndices.joined(separator: ", ")
+    let colorsStr    = vertColors.joined(separator: ", ")
+    let faceCountN   = faceCount * 2
+
+    let usda = """
+    #usda 1.0
+    (
+        defaultPrim = "Root"
+        upAxis = "Y"
+    )
+
+    def Xform "Root"
+    {
+        def Mesh "Gaussians"
+        {
+            bool doubleSided = true
+            point3f[] points = [\(pointsStr)]
+            int[] faceVertexCounts = [\(Array(repeating: "3", count: faceCountN).joined(separator: ", "))]
+            int[] faceVertexIndices = [\(facesStr)]
+            color3f[] primvars:displayColor = [\(colorsStr)] (
+                interpolation = "vertex"
+            )
+            uniform token subdivisionScheme = "none"
+        }
+    }
+    """
+
+    let usdaData = usda.data(using: .utf8)!
+    let usdz     = try makeZip(fileName: "scene.usda", fileData: usdaData)
+    try usdz.write(to: outputPath)
+    print("✓ Saved USDZ with \(keepIndices.count) colored splats")
+}
+
+// Minimal ZIP writer (USDZ is just a ZIP with no compression)
+private func makeZip(fileName: String, fileData: Data) throws -> Data {
+    var zip = Data()
+
+    let nameData    = fileName.data(using: .utf8)!
+    let crc         = crc32(fileData)
+    let fileSize    = UInt32(fileData.count)
+    let nameLen     = UInt16(nameData.count)
+    let localOffset = UInt32(0)
+
+    func u16(_ v: UInt16) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
+    func u32(_ v: UInt32) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
+
+    // Local file header
+    var localHeader = Data()
+    localHeader += u32(0x04034b50)  // signature
+    localHeader += u16(20)          // version needed
+    localHeader += u16(0)           // flags
+    localHeader += u16(0)           // compression: stored
+    localHeader += u16(0)           // mod time
+    localHeader += u16(0)           // mod date
+    localHeader += u32(crc)
+    localHeader += u32(fileSize)
+    localHeader += u32(fileSize)
+    localHeader += u16(nameLen)
+    localHeader += u16(0)           // extra field length
+    localHeader += nameData
+
+    zip += localHeader
+    zip += fileData
+
+    // Central directory entry
+    var centralEntry = Data()
+    centralEntry += u32(0x02014b50) // signature
+    centralEntry += u16(20)         // version made by
+    centralEntry += u16(20)         // version needed
+    centralEntry += u16(0)          // flags
+    centralEntry += u16(0)          // compression
+    centralEntry += u16(0)          // mod time
+    centralEntry += u16(0)          // mod date
+    centralEntry += u32(crc)
+    centralEntry += u32(fileSize)
+    centralEntry += u32(fileSize)
+    centralEntry += u16(nameLen)
+    centralEntry += u16(0)          // extra
+    centralEntry += u16(0)          // comment
+    centralEntry += u16(0)          // disk start
+    centralEntry += u16(0)          // internal attr
+    centralEntry += u32(0)          // external attr
+    centralEntry += u32(localOffset)
+    centralEntry += nameData
+
+    let centralStart = UInt32(zip.count)
+    zip += centralEntry
+
+    // End of central directory
+    var eocd = Data()
+    eocd += u32(0x06054b50)
+    eocd += u16(0)                          // disk number
+    eocd += u16(0)                          // disk with central dir
+    eocd += u16(1)                          // entries on disk
+    eocd += u16(1)                          // total entries
+    eocd += u32(UInt32(centralEntry.count))
+    eocd += u32(centralStart)
+    eocd += u16(0)                          // comment length
+    zip += eocd
+
+    return zip
+}
+
+// CRC-32 for ZIP
+private func crc32(_ data: Data) -> UInt32 {
+    var table = [UInt32](repeating: 0, count: 256)
+    for i in 0..<256 {
+        var c = UInt32(i)
+        for _ in 0..<8 { c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1 }
+        table[i] = c
+    }
+    var crc: UInt32 = 0xFFFFFFFF
+    for byte in data { crc = table[Int((crc ^ UInt32(byte)) & 0xFF)] ^ (crc >> 8) }
+    return crc ^ 0xFFFFFFFF
+}
+
+// MARK: - ViewModel
+
+enum SharpProcessState: Equatable {
+    case idle
+    case processing(Float, String)
+    case completed(URL)
+    case failed(String)
+}
+
+@MainActor
+final class SHARPViewModel: ObservableObject {
+    @Published var selectedImage: UIImage? = nil
+    @Published var usdzURL: URL? = nil
+    @Published var state: SharpProcessState = .idle
+    @Published var isProcessing: Bool = false
+    @Published var errorMessage: String? = nil
+
+    private var runner: SHARPModelRunner?
+    private var runnerLoadTask: Task<Void, Never>?
+
+    init() {
+        runnerLoadTask = Task.detached(priority: .userInitiated) {
+            do {
+                guard let modelURL = Bundle.main.url(forResource: "sharp",
+                                                      withExtension: "mlmodelc") else {
+                    await MainActor.run {
+                        self.errorMessage = "sharp.mlpackage not found in bundle."
+                    }
+                    return
+                }
+                let r = try SHARPModelRunner(modelPath: modelURL)
+                await MainActor.run { self.runner = r }
+            } catch {
+                await MainActor.run { self.errorMessage = error.localizedDescription }
+            }
+        }
+    }
+
+    private func loadRunnerIfNeeded() async throws -> SHARPModelRunner {
+        if let runner {
+            return runner
+        }
+
+        if let task = runnerLoadTask {
+            await task.value
+        }
+
+        if let runner {
+            return runner
+        }
+
+        throw NSError(domain: "SHARP", code: 98,
+                      userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
+    }
+
+    func process(item: PhotosPickerItem?) async {
+        guard let item else { return }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self),
+                  let uiImage = UIImage(data: data) else {
+                throw NSError(domain: "SHARP", code: 99,
+                              userInfo: [NSLocalizedDescriptionKey: "Could not load image data"])
+            }
+
+            await process(uiImage: uiImage)
+        } catch {
+            let message = error.localizedDescription
+            errorMessage = message
+            state = .failed(message)
+        }
+    }
+
+    func process(uiImage: UIImage) async {
+        selectedImage = uiImage
+        isProcessing = true
+        errorMessage = nil
+        usdzURL = nil
+        state = .processing(0.05, "Preparing image...")
+
+        do {
+            let runner = try await loadRunnerIfNeeded()
+
+            state = .processing(0.25, "Running Sharp AI...")
+            let imageArray = try runner.preprocessImage(from: uiImage)
+            state = .processing(0.55, "Building 3D checkpoints...")
+            let gaussians = try runner.predict(image: imageArray, focalLengthPx: 1536)
+
+            state = .processing(0.75, "Saving 3D model...")
+            let outputFileName = "model-\(UUID().uuidString).usdz"
+            let outURL = ScannedModelLibrary.modelURL(for: outputFileName)
+            try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
+
+            usdzURL = outURL
+            state = .processing(0.99, "Finalizing 3D model...")
+            state = .completed(outURL)
+        } catch {
+            let message = error.localizedDescription
+            errorMessage = message
+            state = .failed(message)
+        }
+
+        isProcessing = false
+    }
+
+    func reset() {
+        selectedImage = nil
+        usdzURL = nil
+        state = .idle
+        isProcessing = false
+        errorMessage = nil
+    }
+}
+
+// MARK: - AR View (UIViewRepresentable)
+
+
+
+// MARK: - Content View
+
+
+// MARK: - AR Scene (full-screen)
+
+
+
+// MARK: - App Entry Point
+//
+//@main
+//struct SHARPApp: App {
+//    var body: some Scene {
+//        WindowGroup {
+//            ContentView()
+//        }
+//    }
+//}

@@ -35,6 +35,23 @@ struct ARViewContainer: UIViewRepresentable {
                     print("AR Error loading model \(modelURL.lastPathComponent): \(error.localizedDescription)")
                 }
             }, receiveValue: { modelEntity in
+                // Gaussian-splat models (ML Sharp) use normalized coordinates, not real-world
+                // meters like LiDAR ObjectCapture models. Normalize every model to a known
+                // size and rest it on the plane so it is always visible.
+                let bounds = modelEntity.visualBounds(relativeTo: modelEntity)
+                let extents = bounds.extents
+                let maxDim = max(extents.x, max(extents.y, extents.z))
+                if maxDim > 0 {
+                    let targetSize: Float = 0.3
+                    let scaleFactor = targetSize / maxDim
+                    modelEntity.scale = SIMD3<Float>(repeating: scaleFactor)
+                    modelEntity.position = SIMD3<Float>(
+                        -bounds.center.x * scaleFactor,
+                        -bounds.min.y * scaleFactor,
+                        -bounds.center.z * scaleFactor
+                    )
+                }
+
                 modelEntity.generateCollisionShapes(recursive: true)
                 anchor.addChild(modelEntity)
                 context.coordinator.petEntity = modelEntity
@@ -62,6 +79,8 @@ struct ARViewContainer: UIViewRepresentable {
         private var handPoseRequest = VNDetectHumanHandPoseRequest()
         private var isPetting = false
         private var lastPetTime = Date()
+        private var isProcessingFrame = false
+        private var lastProcessedTime = Date()
         private let reactionScaleFactor: Float = 1.2
         private var originalScale: simd_float3?
         
@@ -101,10 +120,18 @@ struct ARViewContainer: UIViewRepresentable {
                 checkDistance(arView: arView, entity: petEntity)
             }
 
-            guard Date().timeIntervalSince(lastPetTime) > 0.3 else { return }
+            // Run at most one Vision request at a time, throttled to ~3/sec.
+            // This prevents requests from piling up and retaining ARFrames (which would
+            // exhaust memory and cause the app to be killed).
+            guard !isProcessingFrame,
+                  Date().timeIntervalSince(lastProcessedTime) > 0.3 else { return }
+            isProcessingFrame = true
+            lastProcessedTime = Date()
 
             let pixelBuffer = frame.capturedImage
-            DispatchQueue.global(qos: .userInteractive).async {
+            DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+                guard let self else { return }
+                defer { DispatchQueue.main.async { self.isProcessingFrame = false } }
                 let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
                 do {
                     try handler.perform([self.handPoseRequest])

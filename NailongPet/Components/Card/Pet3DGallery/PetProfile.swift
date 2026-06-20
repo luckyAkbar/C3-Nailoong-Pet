@@ -58,7 +58,7 @@ struct PetProfilePhoto: View {
     
     var body: some View {
         ZStack {
-            Color.orangePrimaryBrand
+            Color.surfacePrimary
 
             Image(pet.imageName)
                 .resizable()

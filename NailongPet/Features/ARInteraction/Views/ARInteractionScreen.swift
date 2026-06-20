@@ -25,34 +25,7 @@ struct ARInteractionScreen: View {
                     Spacer()   
                 }
             }
-            
-            VStack {
-                Spacer()
-                if viewModel.speechRecognizer.isListening {
-                    VStack(spacing: 4) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "mic.fill")
-                                .foregroundColor(.white)
-                            Text("Listening for \"\(viewModel.pet.name)\"...")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                        }
-                        
-                        if !viewModel.speechRecognizer.transcript.isEmpty {
-                            Text(viewModel.speechRecognizer.transcript)
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.6))
-                    .cornerRadius(20)
-                    .padding(.bottom, 40)
-                }
-            }
+
         }
         .onAppear {
             viewModel.speechRecognizer.startTranscribing()

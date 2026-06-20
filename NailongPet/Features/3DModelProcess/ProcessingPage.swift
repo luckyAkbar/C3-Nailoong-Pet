@@ -3,17 +3,83 @@ import SwiftUI
 struct ProcessPage: View {
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var manager: LidarCaptureManager
+    @EnvironmentObject private var sharpViewModel: SHARPViewModel
 
-    private var progressPercentage: Float { manager.reconstructionProgress * 100 }
+    var generatorType: GeneratorType
+
+    @State private var displayedProgress: Double = 10
+    @State private var progressTask: Task<Void, Never>?
+    @State private var didAutoAdvance = false
+
+    private var progressPercentage: Float {
+        switch generatorType {
+        case .lidar:
+            return manager.reconstructionProgress * 100
+        case .mlSharp:
+            if case .completed = sharpViewModel.state {
+                return 100
+            }
+            return Float(displayedProgress)
+        }
+    }
+
+    private var targetProgress: Double {
+        switch generatorType {
+        case .lidar:
+            return Double(manager.reconstructionProgress * 100)
+        case .mlSharp:
+            switch sharpViewModel.state {
+            case .idle:
+                return 0
+            case .processing(let progress, _):
+                return min(Double(progress * 100), 99)
+            case .completed:
+                return 100
+            case .failed:
+                return displayedProgress
+            }
+        }
+    }
 
     private var failureMessage: String? {
-        if case .failed(let error) = manager.state { return error.localizedDescription }
-        return nil
+        switch generatorType {
+        case .lidar:
+            if case .failed(let error) = manager.state { return error.localizedDescription }
+            return nil
+        case .mlSharp:
+            if case .failed(let message) = sharpViewModel.state { return message }
+            return nil
+        }
     }
 
     private var isCompleted: Bool {
-        if case .completed = manager.state { return true }
-        return false
+        switch generatorType {
+        case .lidar:
+            if case .completed = manager.state { return true }
+            return false
+        case .mlSharp:
+            if case .completed = sharpViewModel.state { return true }
+            return false
+        }
+    }
+
+    private var phaseText: String {
+        switch generatorType {
+        case .lidar:
+            return "Processing 3D model of your pet ...."
+        case .mlSharp:
+            switch sharpViewModel.state {
+            case .idle:
+                return "Preparing Sharp model..."
+            case .processing(_, let phase):
+                return phase
+            case .completed:
+                return "Done. Preparing next step..."
+            case .failed:
+                return ""
+            }
+            return "Processing 3D model of your pet ...."
+        }
     }
 
     var body: some View {
@@ -29,6 +95,83 @@ struct ProcessPage: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
+        .onAppear {
+            startProgressAnimation()
+            scheduleAutoAdvanceIfNeeded()
+        }
+        .onChange(of: targetProgress) { _ in
+            startProgressAnimation()
+        }
+        .onChange(of: sharpViewModel.state) { _ in
+            scheduleAutoAdvanceIfNeeded()
+        }
+    }
+
+    private func startProgressAnimation() {
+        progressTask?.cancel()
+
+        progressTask = Task {
+            let target = targetProgress
+
+            if generatorType == .mlSharp && displayedProgress == 0 && target > 0 {
+                await MainActor.run {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        displayedProgress = 1.5
+                    }
+                }
+            }
+
+            while !Task.isCancelled {
+                let current = await MainActor.run { displayedProgress }
+                let remaining = target - current
+
+                if remaining <= 0.1 {
+                    await MainActor.run {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            displayedProgress = target
+                        }
+                    }
+                    break
+                }
+
+                let step = max(0.35, remaining * 0.08)
+                let delay: UInt64
+                switch target {
+                case ..<25:
+                    delay = 70_000_000
+                case ..<75:
+                    delay = 110_000_000
+                default:
+                    delay = 160_000_000
+                }
+
+                await MainActor.run {
+                    withAnimation(.linear(duration: Double(delay) / 1_000_000_000)) {
+                        displayedProgress = min(current + step, target)
+                    }
+                }
+
+                try? await Task.sleep(nanoseconds: delay)
+            }
+        }
+    }
+
+    private func scheduleAutoAdvanceIfNeeded() {
+        guard generatorType == .mlSharp,
+              case .completed = sharpViewModel.state,
+              !didAutoAdvance else { return }
+
+        didAutoAdvance = true
+
+        Task { @MainActor in
+            withAnimation(.easeOut(duration: 0.2)) {
+                displayedProgress = 100
+            }
+            try? await Task.sleep(nanoseconds: 650_000_000)
+            router.navigate(to: .processPetDetail(.mlSharp))
+        }
     }
 
     private var processingContent: some View {
@@ -65,7 +208,7 @@ struct ProcessPage: View {
             Spacer()
 
             VStack(spacing: 8) {
-                Text("Processing 3D model of your pet ....")
+                Text(phaseText)
                     .font(.title2Bold)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
@@ -129,12 +272,12 @@ struct ProcessPage: View {
                     .padding(.horizontal, 40)
             }
 
-            Button(action: { router.navigate(to: .processPetDetail) }) {
+            Button(action: { router.navigate(to: .processPetDetail(generatorType)) }) {
                 Text("Next")
                     .font(.subheadRegular)
                     .foregroundStyle(.white)
                     .frame(maxWidth: 184, minHeight: 55)
-                    .background(Color.scrim)
+                    .background(Color.brandPrimary)
                     .clipShape(Capsule())
                     .padding(.horizontal, 40)
             }
@@ -168,6 +311,7 @@ struct ProcessPage: View {
 
             Button(action: {
                 manager.reset()
+                sharpViewModel.reset()
                 router.navigateToRoot()
             }) {
                 Text("Back to Home")
@@ -231,8 +375,26 @@ struct ScanFrame: Shape {
     }
 }
 
-#Preview("Processing") {
-    ProcessPage()
+@MainActor
+private func processingPreview(progressPercent: Float) -> some View {
+    let manager = LidarCaptureManager()
+    manager.reconstructionProgress = progressPercent / 100
+    manager.state = progressPercent >= 100 ? .completed : .reconstructing
+
+    return ProcessPage(generatorType: .lidar)
         .environmentObject(AppRouter())
-        .environmentObject(LidarCaptureManager())
+        .environmentObject(manager)
+        .environmentObject(SHARPViewModel())
+}
+
+#Preview("Processing 0%") {
+    processingPreview(progressPercent: 0)
+}
+
+#Preview("Processing 50%") {
+    processingPreview(progressPercent: 50)
+}
+
+#Preview("Processing 100%") {
+    processingPreview(progressPercent: 100)
 }

@@ -17,38 +17,40 @@ struct ContentView: View {
     /// Router dibuat di sini (root) lalu disebarkan ke seluruh view via environmentObject.
     @StateObject private var router = AppRouter()
     @StateObject private var captureManager = LidarCaptureManager()
+    @StateObject private var sharpViewModel = SHARPViewModel()
     @StateObject private var petStore = PetStore()
 
     var body: some View {
         if hasCompletedOnboarding {
-            NavigationStack(path: $router.path) {
-                Home()
-                    .navigationDestination(for: AppRoute.self) { route in
-                        switch route {
-                        case .choose3DGeneratorTech:
-                            EmptyView()
-                        case .mlSharp:
-                            SharpImageSelectionView()
-                        case .lidar:
-                            LidarCaptureView()
-                        case .processPage:
-                            ProcessPage()
-                        case .processPetDetail:
-                            ProcessPetDetail()
-                        case .pet3DGallery:
-                            Pet3DGalleryScreen()
-                        case .petDetail(let pet):
-                            PetDetail(pet: pet)
-                        case .arInteraction(let pet):
-                            ARInteractionScreen(pet: pet)
-                        }
-                    }
+                    NavigationStack(path: $router.path) {
+                        Home()
+                            .navigationDestination(for: AppRoute.self) { route in
+                                switch route {
+                                case .choose3DGeneratorTech:
+                                    EmptyView()
+                                case .mlSharp:
+                                    SharpImageSelectionView()
+                                case .lidar:
+                                    LidarCaptureView()
+                                case .processPage(let generator):
+                                    ProcessPage(generatorType: generator)
+                                case .processPetDetail(let generator):
+                                    ProcessPetDetail(generatorType: generator)
+                                case .pet3DGallery:
+                                    Pet3DGalleryScreen()
+                                case .petDetail(let pet):
+                                    PetDetail(pet: pet)
+                                case .arInteraction(let pet):
+                                    ARInteractionScreen(pet: pet)
+                                }
+                            }
                     .sheet(isPresented: $router.showChoose3DSheet) {
                         Choose3DGeneratorSheet()
                     }
             }
             .environmentObject(router)
             .environmentObject(captureManager)
+            .environmentObject(sharpViewModel)
             .environmentObject(petStore)
         } else {
             OnboardingScreen(onFinish: {

@@ -30,14 +30,14 @@ extension Color {
 
 extension Color {
     // MARK: - Brand Colors
-    static let brandPrimary   = Color(hex: 0x6A6151)
-    static let brandSecondary = Color(hex: 0xE8E8E8)
+    static let brandPrimary   = Color(hex: 0xD7B655)
+    static let brandSecondary = Color(hex: 0x2C2520)
     static let brandTertiary  = Color(hex: 0xE2DEDB)
 
     
     // MARK: - Text Colors
-    static let textPrimary   = Color(light: 0x000000, dark: 0xFFFFFF)
-    static let textSecondary = Color(light: 0x615848, dark: 0x615848)
+    static let textPrimary   = Color(hex: 0x4B3F1C)
+    static let textSecondary = Color(hex: 0x736744)
     static let textTertiary  = Color(light: 0x8E8E93, dark: 0x8E8E93)
 
 

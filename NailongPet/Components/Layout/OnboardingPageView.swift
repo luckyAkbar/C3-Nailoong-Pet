@@ -12,58 +12,66 @@ struct OnboardingPageView: View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(title)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.black)
+                    .font(Font.title1Bold)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text(description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.black.opacity(0.8))
+                    .font(.body)
+                    .foregroundColor(Color.textSecondary)
                     .lineSpacing(4)
             }
             .padding(.leading, 40)
             
             Spacer()
             
-            VStack(spacing: 52) {
-                VStack {
-                    Image(systemName: iconName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 180)
-                        .foregroundColor(.black)
+            ZStack(alignment: .bottom) {
+                // SVG image — adjust scaleEffect to control size
+                Image(iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(1.65) // ← Adjust this value to scale the SVG
+                    .offset(y: 80)     // Offset to bottom so that the button overlaps it
+                    .opacity(0.7)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                
+                // Button and page dots overlaid on top of the image
+                VStack(spacing: 24) {
+                    if isLastPage {
+                        Button(action: onNext) {
+                            Text("Start")
+                                .font(.body)
+                                .foregroundColor(.black)
+                                .bold()
+                                .frame(width: 320, height: 55)
+                                .glassEffect()
+                                .clipShape(Capsule())
+                        }
+                    } else {
+                        Button(action: onNext) {
+                            Text("Next")
+                                .font(.body)
+                                .foregroundColor(.black)
+                                .bold()
+                                .frame(width: 320, height: 55)
+                                .glassEffect()
+                                .clipShape(Capsule())
+                        }
+                    }
+                    
+                    HStack {
+                        Circle()
+                            .fill(isLastPage ? Color.black.opacity(0.3) : Color.black)
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .fill(isLastPage ? Color.black : Color.black.opacity(0.3))
+                            .frame(width: 6, height: 6)
+                    }
                 }
                 .padding(.bottom, 30)
-                
-                if isLastPage {
-                    Button(action: onNext) {
-                        Text("Next")
-                            .font(.body)
-                            .foregroundColor(.textPrimary)
-                            .frame(width: 320, height: 55)
-                            .glassEffect()
-                            .clipShape(Capsule())
-                    }
-                } else {
-                    Button(action: onNext) {
-                        Text("Start")
-                            .font(.body)
-                            .foregroundColor(.textPrimary)
-                            .frame(width: 320, height: 55)
-                            .glassEffect()
-                            .clipShape(Capsule())
-                    }
-                }
-                
-                HStack {
-                    Circle()
-                        .fill(isLastPage ? Color.black.opacity(0.3) : Color.black)
-                        .frame(width: 6, height: 6)
-                    Circle()
-                        .fill(isLastPage ? Color.black : Color.black.opacity(0.3))
-                        .frame(width: 6, height: 6)
-                }
             }
             .frame(maxWidth: .infinity)
+            .clipped()
         }
     }
 }
@@ -74,7 +82,7 @@ struct OnboardingPageView: View {
         OnboardingPageView(
             title: "Create Their Presence",
             description: "Some memories never truly leave.",
-            iconName: AppIcon.pawPrint,
+            iconName: AppIcon.firstOnboardingImg.rawValue,
             isLastPage: false,
             onSkip: {},
             onNext: {}
@@ -88,7 +96,7 @@ struct OnboardingPageView: View {
         OnboardingPageView(
             title: "Create Their Presence",
             description: "Some memories never truly leave.",
-            iconName: AppIcon.pawPrint,
+            iconName: AppIcon.secondOnboardingImg.rawValue,
             isLastPage: true,
             onSkip: {},
             onNext: {}

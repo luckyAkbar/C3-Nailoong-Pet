@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 3508 2481" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g>
+        <g transform="matrix(4.559158,0.433566,-0.433566,4.559158,-222.038299,-3482.665379)">
+            <path d="M574,819C574,819 537.143,816.929 530,860C522.857,903.071 574,819 574,819Z" style="fill:rgb(44,37,32);stroke:rgb(44,37,32);stroke-width:14.58px;"/>
+        </g>
+        <g transform="matrix(4.579727,0,0,4.579727,-167.656233,-3363.548072)">
+            <path d="M362,891C362,891 352.664,975.369 446,1010" style="fill:none;stroke:rgb(44,37,32);stroke-width:14.58px;"/>
+        </g>
+        <g transform="matrix(4.579727,0,0,4.579727,-167.656233,-3363.548072)">
+            <path d="M362,891C362,891 358.692,933.05 334,958" style="fill:none;stroke:rgb(44,37,32);stroke-width:14.58px;"/>
+        </g>
+        <g transform="matrix(1.631602,-0.242193,0.242193,1.631602,-325.900811,-388.90567)">
+            <path d="M772,674C772,674 705.791,554.82 555.001,519.382C493.942,505.033 419.015,504.414 329,531" style="fill:none;stroke:rgb(44,37,32);stroke-width:39.58px;"/>
+        </g>
+        <g transform="matrix(1.46957,-0.749097,0.749097,1.46957,-687.894132,360.332758)">
+            <path d="M772,674C772,674 705.791,554.82 555.001,519.382C493.942,505.033 419.015,504.414 329,531" style="fill:none;stroke:rgb(44,37,32);stroke-width:39.58px;"/>
+        </g>
+        <g transform="matrix(3.015976,0,0,3.015976,-119.262162,-3315.187476)">
+            <path d="M451.563,1892C451.563,1892 390.55,1757.642 504,1661C617.45,1564.358 652.946,1738.711 540,1710C540,1710 481.952,1671.81 495,1558C495,1558 366.406,1477.732 425,1343C425,1343 451.669,1267.595 529,1267C529,1267 576.063,1180.675 673,1203C673,1203 814.787,1234.38 859,1238C903.213,1241.62 1191.248,944.912 982,1398C982,1398 1104.461,1507.495 1081,1879" style="fill:none;stroke:rgb(44,37,32);stroke-width:39.58px;"/>
+        </g>
+    </g>
+</svg>

@@ -42,7 +42,7 @@ struct HomeFilledState: View {
                         .padding(.horizontal, 32)
                         .foregroundStyle(Color.onBrand)
                         .frame(height: 44)
-                        .glassEffect(.regular.tint(Color.brandPrimary).interactive(), in: Capsule())
+                        .glassEffect(.regular.tint(Color.brandSecondary).interactive(), in: Capsule())
                         .clipShape(Capsule())
                 }
                 .padding(.bottom, 26)

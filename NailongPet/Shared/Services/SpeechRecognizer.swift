@@ -8,18 +8,28 @@ class SpeechRecognizer: ObservableObject {
     @Published var transcript: String = ""
     @Published var isListening: Bool = false
     
-    private let speechRecognizer = SFSpeechRecognizer()
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "id-ID"))
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     
+    private var isIntentionallyStopped: Bool = false
+    
     func startTranscribing() {
-        SFSpeechRecognizer.requestAuthorization { [weak self] authStatus in
-            DispatchQueue.main.async {
-                if authStatus == .authorized {
-                    self?.beginAudioSession()
-                } else {
-                    print("Speech recognition not authorized.")
+        isIntentionallyStopped = false
+        AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+            guard granted else {
+                print("Microphone permission denied.")
+                return
+            }
+            
+            SFSpeechRecognizer.requestAuthorization { authStatus in
+                DispatchQueue.main.async {
+                    if authStatus == .authorized {
+                        self?.beginAudioSession()
+                    } else {
+                        print("Speech recognition not authorized.")
+                    }
                 }
             }
         }
@@ -27,8 +37,7 @@ class SpeechRecognizer: ObservableObject {
     
     private func beginAudioSession() {
         if audioEngine.isRunning {
-            stopTranscribing()
-            return
+            internalStop()
         }
         
         do {
@@ -54,11 +63,20 @@ class SpeechRecognizer: ObservableObject {
         audioEngine.prepare()
         do {
             try audioEngine.start()
-            self.isListening = true
-            self.transcript = ""
+            DispatchQueue.main.async {
+                self.isListening = true
+                self.transcript = ""
+            }
             print("SpeechRecognizer: Audio engine started. Listening...")
         } catch {
             print("SpeechRecognizer: Audio Engine failed to start: \(error.localizedDescription)")
+            if !self.isIntentionallyStopped {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    if !self.isIntentionallyStopped {
+                        self.beginAudioSession()
+                    }
+                }
+            }
             return
         }
         
@@ -72,13 +90,36 @@ class SpeechRecognizer: ObservableObject {
             }
             
             if error != nil || isFinal {
-                // Ignore small errors, but if it stops we clean up.
-                self.stopTranscribing()
+                self.internalStop()
+                
+                if !self.isIntentionallyStopped {
+                    // Auto-restart to keep listening continuously
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        if !self.isIntentionallyStopped {
+                            self.beginAudioSession()
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.isListening = false
+                        self.transcript = ""
+                    }
+                }
             }
         }
     }
     
     func stopTranscribing() {
+        isIntentionallyStopped = true
+        internalStop()
+        DispatchQueue.main.async {
+            self.isListening = false
+            self.transcript = ""
+        }
+        print("SpeechRecognizer: Stopped listening.")
+    }
+    
+    private func internalStop() {
         if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
@@ -89,12 +130,5 @@ class SpeechRecognizer: ObservableObject {
         
         self.recognitionRequest = nil
         self.recognitionTask = nil
-        
-        DispatchQueue.main.async {
-            self.isListening = false
-            self.transcript = ""
-        }
-        
-        print("SpeechRecognizer: Stopped listening.")
     }
 }

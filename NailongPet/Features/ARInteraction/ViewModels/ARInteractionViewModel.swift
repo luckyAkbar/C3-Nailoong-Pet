@@ -22,22 +22,32 @@ class ARInteractionViewModel: ObservableObject {
         setupSpeechObservation()
     }
     
+    private var lastProcessedTranscriptLength = 0
+    
     private func setupSpeechObservation() {
         speechRecognizer.$transcript
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .receive(on: RunLoop.main)
             .sink { [weak self] text in
-                guard let self = self, !text.isEmpty else { return }
+                guard let self = self else { return }
                 
-                // Cek apakah transkrip mengandung nama pet
-                if text.lowercased().contains(self.pet.name.lowercased()) {
+                if text.isEmpty {
+                    self.lastProcessedTranscriptLength = 0
+                    return
+                }
+                
+                // If the transcript resets or gets shorter, reset our tracker
+                if text.count < self.lastProcessedTranscriptLength {
+                    self.lastProcessedTranscriptLength = 0
+                }
+                
+                let newTextStartIndex = text.index(text.startIndex, offsetBy: self.lastProcessedTranscriptLength)
+                let newText = String(text[newTextStartIndex...])
+                
+                // Cek apakah teks kata-kata TERBARU mengandung nama pet
+                if newText.lowercased().contains(self.pet.name.lowercased()) {
                     print("ARInteractionViewModel: Pet name '\(self.pet.name)' detected!")
                     self.voiceTriggerEvent.send()
-                    
-                    // Restart listening to clear transcript
-                    self.speechRecognizer.stopTranscribing()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.speechRecognizer.startTranscribing()
-                    }
+                    self.lastProcessedTranscriptLength = text.count
                 }
             }
             .store(in: &cancellables)

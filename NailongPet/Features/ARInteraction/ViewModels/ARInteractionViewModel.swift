@@ -3,10 +3,10 @@ import Combine
 
 class ARInteractionViewModel: ObservableObject {
     @Published var showInstructionCard: Bool = true
-    @Published var instructionCardTextContent: String = "Pan the iPhone camera from left to right to start"
+    @Published var instructionCardTextContent: String = "Move your camera from right to left and find a surface to make your pet appears."
     @Published var isTooFar: Bool = false
     
-    private var defaultInstructionCardTextContent: String = "Pan the iPhone camera from left to right to start"
+    private var defaultInstructionCardTextContent: String = "Move your camera from right to left and find a surface to make your pet appears."
     private var defaultShowInstructionCard: Bool = true
     
     let pet: Pet3DProfile

@@ -48,13 +48,14 @@ struct SharpImageSelectionView: View {
                     }) {
                         Text("Create 3D")
                             .font(.subheadBold)
-                            .foregroundColor(sharpViewModel.selectedImage != nil ? .textPrimary : Color.white.opacity(0.5))
+                            .foregroundColor(sharpViewModel.selectedImage != nil ? Color.white : Color.white.opacity(0.5))
+                            .bold()
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
                             .background(
                                 sharpViewModel.selectedImage != nil
-                                    ? Color.surfaceCard        // neutral brown/gray when active
-                                    : Color.brandPrimary.opacity(0.4)  // muted when disabled
+                                    ? Color.brandSecondary        // neutral brown/gray when active
+                                    : Color.brandSecondary.opacity(0.4)  // muted when disabled
                             )
                             .clipShape(Capsule())
                             .padding(.horizontal, 100)

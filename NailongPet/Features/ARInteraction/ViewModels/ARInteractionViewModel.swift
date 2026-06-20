@@ -10,11 +10,47 @@ class ARInteractionViewModel: ObservableObject {
     private var defaultShowInstructionCard: Bool = true
     
     let pet: Pet3DProfile
+    let speechRecognizer = SpeechRecognizer()
+    let voiceTriggerEvent = PassthroughSubject<Void, Never>()
+    private var cancellables = Set<AnyCancellable>()
+    
     private var hasShownPostRenderInstructions = false
     private let instructionDelay: TimeInterval = 5.0
     
     init(pet: Pet3DProfile) {
         self.pet = pet
+        setupSpeechObservation()
+    }
+    
+    private var lastProcessedTranscriptLength = 0
+    
+    private func setupSpeechObservation() {
+        speechRecognizer.$transcript
+            .receive(on: RunLoop.main)
+            .sink { [weak self] text in
+                guard let self = self else { return }
+                
+                if text.isEmpty {
+                    self.lastProcessedTranscriptLength = 0
+                    return
+                }
+                
+                // If the transcript resets or gets shorter, reset our tracker
+                if text.count < self.lastProcessedTranscriptLength {
+                    self.lastProcessedTranscriptLength = 0
+                }
+                
+                let newTextStartIndex = text.index(text.startIndex, offsetBy: self.lastProcessedTranscriptLength)
+                let newText = String(text[newTextStartIndex...])
+                
+                // Cek apakah teks kata-kata TERBARU mengandung nama pet
+                if newText.lowercased().contains(self.pet.name.lowercased()) {
+                    print("ARInteractionViewModel: Pet name '\(self.pet.name)' detected!")
+                    self.voiceTriggerEvent.send()
+                    self.lastProcessedTranscriptLength = text.count
+                }
+            }
+            .store(in: &cancellables)
     }
     
     func onModelRendered() {

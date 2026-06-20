@@ -36,8 +36,12 @@ struct ARViewContainer: UIViewRepresentable {
                 }
             }, receiveValue: { modelEntity in
                 modelEntity.generateCollisionShapes(recursive: true)
-                anchor.addChild(modelEntity)
+                let pivot = Entity()
+                anchor.addChild(pivot)
+                pivot.addChild(modelEntity)
+                
                 context.coordinator.petEntity = modelEntity
+                context.coordinator.pivotEntity = pivot
                 
                 // Subscribe to anchored state so we know when it actually appears in the real world
                 context.coordinator.setupAnchoredSubscription(arView: arView, anchor: anchor)
@@ -57,6 +61,7 @@ struct ARViewContainer: UIViewRepresentable {
         var viewModel: ARInteractionViewModel
         var cancellables = Set<AnyCancellable>()
         var petEntity: ModelEntity?
+        var pivotEntity: Entity?
         weak var arView: ARView?
         
         private var handPoseRequest = VNDetectHumanHandPoseRequest()
@@ -72,6 +77,14 @@ struct ARViewContainer: UIViewRepresentable {
         
         init(viewModel: ARInteractionViewModel) {
             self.viewModel = viewModel
+            super.init()
+            
+            self.viewModel.voiceTriggerEvent
+                .receive(on: RunLoop.main)
+                .sink { [weak self] in
+                    self?.triggerVoiceReaction()
+                }
+                .store(in: &cancellables)
         }
         
         func setupAnchoredSubscription(arView: ARView, anchor: AnchorEntity) {
@@ -136,6 +149,44 @@ struct ARViewContainer: UIViewRepresentable {
                     }
                 } catch {
                     // Ignore dropped frames.
+                }
+            }
+        }
+        
+        func triggerVoiceReaction() {
+            guard !isPetting else { return }
+            isPetting = true
+            lastPetTime = Date()
+
+            guard let pivot = pivotEntity, let arView = self.arView, let parent = pivot.parent else {
+                isPetting = false
+                return
+            }
+
+            let pivotPos = pivot.position(relativeTo: nil)
+            var cameraPos = arView.cameraTransform.translation
+            cameraPos.y = pivotPos.y
+
+            let currentTransform = pivot.transform
+
+            let dummy = Entity()
+            parent.addChild(dummy)
+            dummy.position = pivot.position
+            dummy.look(at: cameraPos, from: pivotPos, relativeTo: nil, forward: .positiveZ)
+
+            var targetTransform = currentTransform
+            targetTransform.rotation = dummy.transform.rotation
+
+            // Animate turning to face the camera
+            pivot.move(to: targetTransform, relativeTo: parent, duration: 0.6, timingFunction: .easeInOut)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // Return to original rotation
+                pivot.move(to: currentTransform, relativeTo: parent, duration: 0.6, timingFunction: .easeInOut)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    self.isPetting = false
+                    dummy.removeFromParent()
                 }
             }
         }

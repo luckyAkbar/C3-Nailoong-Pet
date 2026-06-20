@@ -25,6 +25,13 @@ struct ARInteractionScreen: View {
                     Spacer()   
                 }
             }
+
+        }
+        .onAppear {
+            viewModel.speechRecognizer.startTranscribing()
+        }
+        .onDisappear {
+            viewModel.speechRecognizer.stopTranscribing()
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

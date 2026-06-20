@@ -33,11 +33,11 @@ struct HomeEmptyState: View {
                 Button(action: onCreate) {
                     Text("Bring Pet to 3D")
                         .font(.subheadRegular)
-                        .foregroundColor(.onBrand)
+                        .foregroundColor(Color.white)
                         .padding(.horizontal)
                         .frame(maxWidth:155, minHeight: 59)
                         .clipShape(Capsule())
-                        .glassEffect(.regular.tint(Color.brandPrimary).interactive(), in: Capsule())
+                        .glassEffect(.regular.tint(Color.brandSecondary).interactive(), in: Capsule())
                 }
 
                 Spacer()
@@ -50,5 +50,4 @@ struct HomeEmptyState: View {
 
 #Preview {
     HomeEmptyState()
-        .background(Color.surfaceCanvas)
 }

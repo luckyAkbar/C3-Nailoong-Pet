@@ -13,8 +13,8 @@ struct LidarPreservedInstructionSheet: View {
     private let steps: [StepItem] = [
         StepItem(icon: .pawLoading,      text: "Scan while your pet is sleeping soundly"),
         StepItem(icon: .infoTips,        text: "Ensure even, bright room lighting"),
-        StepItem(icon: .walkAround,      text: "Walk 360° around your pet slowly"),
-        StepItem(icon: .cameraGuideline, text: "Keep the collar, toy, or pet fully inside the box"),
+        StepItem(icon: .walkAround,      text: "Walk in a full circle (360°) around your pet — you need to physically move, not just turn in place"),
+        StepItem(icon: .cameraGuideline, text: "Keep your pet fully inside the frame at all times"),
     ]
 
     var body: some View {

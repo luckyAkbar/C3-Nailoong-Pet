@@ -9,6 +9,10 @@ class ARInteractionViewModel: ObservableObject {
     private var defaultInstructionCardTextContent: String = "Move your camera from right to left and find a surface to make your pet appears."
     private var defaultShowInstructionCard: Bool = true
     
+    @AppStorage("lastPettingActionTime") private var lastPettingActionTime: Double = 0
+    @AppStorage("lastVoiceActionTime") private var lastVoiceActionTime: Double = 0
+    private let cooldownInterval: TimeInterval = 3 * 24 * 60 * 60
+    
     let pet: Pet3DProfile
     let speechRecognizer = SpeechRecognizer()
     let voiceTriggerEvent = PassthroughSubject<Void, Never>()
@@ -57,28 +61,35 @@ class ARInteractionViewModel: ObservableObject {
         guard !hasShownPostRenderInstructions else { return }
         hasShownPostRenderInstructions = true
         
-        // Hide the initial 'pan camera' instruction when model is rendered
         DispatchQueue.main.async {
-            self.setInstruction(show: false, text: self.instructionCardTextContent)
+            self.evaluateOnboardingState()
         }
+    }
+    
+    func didPerformPettingAction() {
+        lastPettingActionTime = Date().timeIntervalSince1970
+        DispatchQueue.main.async {
+            self.evaluateOnboardingState()
+        }
+    }
+    
+    func didPerformVoiceAction() {
+        lastVoiceActionTime = Date().timeIntervalSince1970
+        DispatchQueue.main.async {
+            self.evaluateOnboardingState()
+        }
+    }
+    
+    private func evaluateOnboardingState() {
+        let now = Date().timeIntervalSince1970
         
-        // Delay before showing the petting instruction
-        DispatchQueue.main.asyncAfter(deadline: .now() + instructionDelay) {
-            self.setInstruction(show: true, text: "Gently pet your 3D friend to see their reaction!")
-            
-            // Hide and delay before showing the calling instruction
-            DispatchQueue.main.asyncAfter(deadline: .now() + self.instructionDelay) {
-                self.setInstruction(show: false, text: "Gently pet your 3D friend to see their reaction!")
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + self.instructionDelay) {
-                    self.setInstruction(show: true, text: "Call out your pet's name to catch their attention!")
-                    
-                    // Hide the calling instruction after the delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + self.instructionDelay) {
-                        self.setInstruction(show: false, text: "Call out your pet's name to catch their attention!")
-                    }
-                }
-            }
+        // Logika antrian
+        if (now - lastPettingActionTime) >= cooldownInterval {
+            setInstruction(show: true, text: "Try to pet your 3D pet directly")
+        } else if (now - lastVoiceActionTime) >= cooldownInterval {
+            setInstruction(show: true, text: "Try to call your 3D pet and see it reaction")
+        } else {
+            setInstruction(show: false, text: "")
         }
     }
     
@@ -98,8 +109,11 @@ class ARInteractionViewModel: ObservableObject {
             self.showInstructionCard = true
             self.instructionCardTextContent = "⚠️ You are too far from the pet! Please come closer."
         } else {
-            self.showInstructionCard = defaultShowInstructionCard
-            self.instructionCardTextContent = defaultInstructionCardTextContent
+            // Restore state safely on main thread
+            DispatchQueue.main.async {
+                self.showInstructionCard = self.defaultShowInstructionCard
+                self.instructionCardTextContent = self.defaultInstructionCardTextContent
+            }
         }
     }
 }

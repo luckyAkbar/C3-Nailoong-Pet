@@ -157,6 +157,11 @@ struct ARViewContainer: UIViewRepresentable {
             guard !isPetting else { return }
             isPetting = true
             lastPetTime = Date()
+            
+            // Beritahu ViewModel bahwa user berhasil memanggil nama
+            DispatchQueue.main.async {
+                self.viewModel.didPerformVoiceAction()
+            }
 
             guard let pivot = pivotEntity, let arView = self.arView, let parent = pivot.parent else {
                 isPetting = false
@@ -195,6 +200,11 @@ struct ARViewContainer: UIViewRepresentable {
             guard !isPetting else { return }
             isPetting = true
             lastPetTime = Date()
+            
+            // Beritahu ViewModel bahwa user berhasil mengelus
+            DispatchQueue.main.async {
+                self.viewModel.didPerformPettingAction()
+            }
 
             guard let entity = petEntity else { return }
 

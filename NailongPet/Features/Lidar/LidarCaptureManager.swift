@@ -25,7 +25,6 @@ final class LidarCaptureManager: ObservableObject {
     @Published var isPaused: Bool = false
     @Published var numberOfShots: Int = 0
     @Published var latestThumbnail: UIImage? = nil
-    @Published var currentFeedback: Set<ObjectCaptureSession.Feedback> = []
 
     private(set) var captureDir: URL
     private(set) var imagesDir: URL
@@ -118,7 +117,6 @@ final class LidarCaptureManager: ObservableObject {
         numberOfShots = 0
         latestThumbnail = nil
         reconstructionProgress = 0
-        currentFeedback = []
     }
 
     private func observeSessionStateUpdates(_ session: ObjectCaptureSession) {
@@ -160,8 +158,6 @@ final class LidarCaptureManager: ObservableObject {
     }
 
     private func updateFolderContents() {
-        currentFeedback = session?.feedback ?? []
-
         do {
             let files = try FileManager.default.contentsOfDirectory(
                 at: imagesDir,

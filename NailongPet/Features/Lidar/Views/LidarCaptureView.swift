@@ -37,6 +37,9 @@ struct LidarCaptureView: View {
                 manager.startSession()
             }
         }
+        .onDisappear {
+            manager.reset()
+        }
     }
 
     @ViewBuilder
@@ -56,8 +59,18 @@ struct LidarCaptureView: View {
 
                 if let session = manager.session, session.state == .capturing {
                     VStack {
-                        ScanConditionsHUD(feedback: manager.currentFeedback)
-                            .padding(.top, 80)
+                        HStack {
+                            Spacer()
+                            ShotCountPill(count: manager.numberOfShots, minimum: minimumShots)
+                            Spacer()
+                        }
+                        .padding(.top, 80)
+
+                        if let warningFeedback = session.feedback.first(where: { $0 != .movingTooFast && $0 != .outOfFieldOfView }) {
+                            ScanWarningChip(feedback: warningFeedback)
+                                .padding(.top, 8)
+                        }
+
                         Spacer()
                         InstructionBubble(message: instructionMessage(for: session))
                             .padding(.bottom, 16)
@@ -107,7 +120,6 @@ struct LidarCaptureView: View {
     }
 
     private func closeView() {
-        manager.reset()
         dismiss()
     }
 
@@ -306,6 +318,69 @@ private struct CaptureThumbnail: View {
     }
 }
 
+private struct ShotCountPill: View {
+    var count: Int
+    var minimum: Int
+
+    private var hasReachedMinimum: Bool { count >= minimum }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: hasReachedMinimum ? "checkmark.circle.fill" : "camera.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text("\(count) shots")
+                .font(.system(size: 14, weight: .semibold))
+                .monospacedDigit()
+        }
+        .foregroundColor(hasReachedMinimum ? Color.greenSucceedAction : .whitePrimarySurface)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.55).clipShape(Capsule()))
+        .overlay(
+            Capsule().stroke(
+                hasReachedMinimum ? Color.greenSucceedAction.opacity(0.6) : Color.whitePrimarySurface.opacity(0.25),
+                lineWidth: 1
+            )
+        )
+        .animation(.easeOut(duration: 0.2), value: hasReachedMinimum)
+    }
+}
+
+private struct ScanWarningChip: View {
+    var feedback: ObjectCaptureSession.Feedback
+
+    private var label: String {
+        switch feedback {
+        case .objectTooFar:       return "Too far — move closer"
+        case .objectTooClose:     return "Too close — step back"
+        case .environmentTooDark: return "Too dark — find brighter light"
+        default:                  return ""
+        }
+    }
+
+    private var icon: String {
+        switch feedback {
+        case .objectTooFar, .objectTooClose: return "arrow.up.and.down.circle.fill"
+        case .environmentTooDark:            return "sun.max.fill"
+        default:                             return "exclamationmark.circle.fill"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(Color.orangePrimaryBrand)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.55).clipShape(Capsule()))
+        .overlay(Capsule().stroke(Color.orangePrimaryBrand.opacity(0.6), lineWidth: 1))
+    }
+}
+
 private struct ScanProgressSlider: View {
     var captureCount: Int = 0
 
@@ -321,22 +396,6 @@ private struct ScanProgressSlider: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack {
-                Text("Scan Progress")
-                    .font(.footnoteRegular)
-                    .foregroundColor(.whitePrimarySurface.opacity(0.7))
-                Spacer()
-                HStack(spacing: 4) {
-                    Text("\(captureCount)")
-                        .font(.title2Bold)
-                        .foregroundColor(.whitePrimarySurface)
-                        .monospacedDigit()
-                    Text("shots")
-                        .font(.footnoteRegular)
-                        .foregroundColor(.whitePrimarySurface.opacity(0.7))
-                }
-            }
-
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
@@ -357,80 +416,14 @@ private struct ScanProgressSlider: View {
             .frame(height: 6)
 
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Minimum \(minCount) shots")
-                        .foregroundColor(hasReachedMinimum ? Color.greenSucceedAction : .whitePrimarySurface.opacity(0.8))
-                }
+                Text("Minimum \(minCount) shots")
+                    .foregroundColor(hasReachedMinimum ? Color.greenSucceedAction : .whitePrimarySurface.opacity(0.8))
                 Spacer()
                 Text("Maximum \(maxCount) shots")
                     .foregroundColor(.whitePrimarySurface.opacity(0.5))
             }
             .font(.system(size: 11, weight: .regular))
         }
-    }
-}
-
-private struct ScanConditionsHUD: View {
-    var feedback: Set<ObjectCaptureSession.Feedback>
-
-    private var distanceStatus: ConditionStatus {
-        if feedback.contains(.objectTooClose) { return .bad("Too close") }
-        if feedback.contains(.objectTooFar)   { return .bad("Too far") }
-        return .good("Good distance")
-    }
-
-    private var lightStatus: ConditionStatus {
-        if feedback.contains(.environmentTooDark) { return .bad("Too dark") }
-        return .good("Good light")
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ConditionChip(icon: "arrow.up.and.down", status: distanceStatus)
-            ConditionChip(icon: "sun.max.fill", status: lightStatus)
-        }
-    }
-}
-
-private enum ConditionStatus {
-    case good(String)
-    case bad(String)
-
-    var label: String {
-        switch self { case .good(let l), .bad(let l): return l }
-    }
-
-    var isOK: Bool {
-        if case .good = self { return true }
-        return false
-    }
-}
-
-private struct ConditionChip: View {
-    var icon: String
-    var status: ConditionStatus
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            Text(status.label)
-                .font(.system(size: 12, weight: .medium))
-        }
-        .foregroundColor(status.isOK ? Color.greenSucceedAction : Color.orangePrimaryBrand)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            Color.black.opacity(0.55)
-                .clipShape(Capsule())
-        )
-        .overlay(
-            Capsule()
-                .stroke(
-                    status.isOK ? Color.greenSucceedAction.opacity(0.6) : Color.orangePrimaryBrand.opacity(0.6),
-                    lineWidth: 1
-                )
-        )
     }
 }
 

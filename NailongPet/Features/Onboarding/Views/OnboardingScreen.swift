@@ -48,7 +48,9 @@ struct OnboardingScreen: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        // on skip action later here
+                        withAnimation {
+                            viewModel.currentPage = 1
+                        }
                     }) {
                         Text("Skip")
                             .font(.body.weight(.semibold))

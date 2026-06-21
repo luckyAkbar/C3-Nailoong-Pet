@@ -135,8 +135,22 @@ class SHARPModelRunner {
     // MARK: Preprocess — UIImage instead of NSImage
 
     /// Accepts a UIImage picked from PhotosPicker or the camera roll.
-    func preprocessImage(from uiImage: UIImage) throws -> MLMultiArray {
-        guard let cgImage = uiImage.cgImage else {
+    /// Returns the pixel array **and** the original image's aspect ratio (width / height),
+    /// which callers can use to un-squish the 3-D output.
+    func preprocessImage(from uiImage: UIImage) throws -> (array: MLMultiArray, aspectRatio: Float) {
+        let normalizedImage: UIImage
+        if uiImage.imageOrientation == .up, uiImage.cgImage != nil {
+            normalizedImage = uiImage
+        } else {
+            let format = UIGraphicsImageRendererFormat.default()
+            format.scale = uiImage.scale
+            let renderer = UIGraphicsImageRenderer(size: uiImage.size, format: format)
+            normalizedImage = renderer.image { _ in
+                uiImage.draw(in: CGRect(origin: .zero, size: uiImage.size))
+            }
+        }
+
+        guard let cgImage = normalizedImage.cgImage else {
             throw NSError(domain: "SHARP", code: 2,
                           userInfo: [NSLocalizedDescriptionKey: "Failed to get CGImage from UIImage"])
         }
@@ -193,7 +207,8 @@ class SHARPModelRunner {
             }
         }
 
-        return imageArray
+        let aspectRatio = Float(uiImage.size.width / uiImage.size.height)
+        return (imageArray, aspectRatio)
     }
 
     // MARK: Predict
@@ -253,9 +268,13 @@ class SHARPModelRunner {
 
 // MARK: - Save as USDZ (iOS-compatible, no export() needed)
 
+/// - aspectRatio: original image width / height.  For portrait images (< 1.0) the ML model
+///   received a horizontally-squished square input, so X positions must be scaled down by this
+///   factor to restore the correct proportions.  Pass 1.0 for square / landscape inputs.
 func saveUSDZ(gaussians: Gaussians3D,
               to outputPath: URL,
-              decimation: Float = 1.0) throws {
+              decimation: Float = 1.0,
+              aspectRatio: Float = 1.0) throws {
 
     let keepIndices = decimation < 1.0
         ? gaussians.decimationIndices(keepRatio: decimation)
@@ -273,15 +292,17 @@ func saveUSDZ(gaussians: Gaussians3D,
     let meanPtr  = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
     let colorPtr = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
 
-    let s: Float = 0.003
+    let s: Float = 0.006
     var points:      [String] = []
     var faceIndices: [String] = []
     var vertColors:  [String] = []
     var faceCount = 0
 
     for i in culledIndices {
-        let x = meanPtr[i * 3 + 0]
-        let y = -meanPtr[i * 3 + 1] * 0.5
+        // Apply the aspect-ratio correction on the X axis so that portrait images
+        // are not horizontally squished in the reconstructed 3-D scene.
+        let x = meanPtr[i * 3 + 0] * aspectRatio
+        let y = -meanPtr[i * 3 + 1] * 1.0
         let z = -meanPtr[i * 3 + 2] * 2.0
 
         let r = linearRGBToSRGB(colorPtr[i * 3 + 0])
@@ -504,7 +525,7 @@ class SHARPViewModel: ObservableObject {
             // Step 1: Preprocessing
             state = .processing(progress: 0.0, phase: "Preprocessing image...")
             startSmoothProgress(from: 0.0, to: 0.2, duration: 0.5)
-            let imageArray = try r.preprocessImage(from: uiImage)
+            let (imageArray, aspectRatio) = try r.preprocessImage(from: uiImage)
             progressTimer?.cancel()
 
             // Step 2: CoreML Prediction
@@ -524,7 +545,7 @@ class SHARPViewModel: ObservableObject {
             let outURL = ScannedModelLibrary.modelURL(for: fileName)
             
             try await Task.detached(priority: .userInitiated) {
-                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
+                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5, aspectRatio: aspectRatio)
             }.value
             progressTimer?.cancel()
 

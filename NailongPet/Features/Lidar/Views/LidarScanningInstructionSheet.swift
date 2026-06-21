@@ -45,17 +45,15 @@ struct LidarScanningInstructionSheet: View {
             Spacer()
 
             // MARK: - Text Content
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Walk Around Your Pet to Scan in 3D")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Prepare a Clear Photo of Your Pet")
                     .font(.title2Bold)
                     .foregroundColor(.textPrimary)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    ScanningTipRow(number: "1", text: "Make sure the room is bright and evenly lit")
-                    ScanningTipRow(number: "2", text: "Place your pet in the center, then tap Record")
-                    ScanningTipRow(number: "3", text: "Walk slowly in a full circle (360°) around your pet — don't stay in one spot")
-                    ScanningTipRow(number: "4", text: "Keep scanning until the bar turns green (minimum 20 shots)")
-                }
+                Text("For the best scan, ensure the room is brightly and evenly lit, then walk 360° slowly around your sleeping pet while keeping them and their items fully inside the frame.")
+                    .font(.footnoteRegular)
+                    .foregroundColor(Color.textPrimary.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 24)
@@ -73,29 +71,6 @@ struct LidarScanningInstructionSheet: View {
             .buttonStyle(.glass)
             .padding(.horizontal, 40)
             .padding(.bottom, 34)
-        }
-    }
-}
-
-// MARK: - Private Sub-views
-
-private struct ScanningTipRow: View {
-    var number: String
-    var text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(number)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.textPrimary)
-                .frame(width: 22, height: 22)
-                .background(Color.textPrimary.opacity(0.12))
-                .clipShape(Circle())
-
-            Text(text)
-                .font(.footnoteRegular)
-                .foregroundColor(Color.textPrimary.opacity(0.85))
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

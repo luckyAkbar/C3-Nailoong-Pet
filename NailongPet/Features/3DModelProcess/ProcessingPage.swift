@@ -29,7 +29,7 @@ struct ProcessPage: View {
             return Double(manager.reconstructionProgress * 100)
         case .mlSharp:
             switch sharpViewModel.state {
-            case .idle:
+            case .notStarted:
                 return 0
             case .processing(let progress, _):
                 return min(Double(progress * 100), 99)
@@ -69,7 +69,7 @@ struct ProcessPage: View {
             return "Processing 3D model of your pet ...."
         case .mlSharp:
             switch sharpViewModel.state {
-            case .idle:
+            case .notStarted:
                 return "Preparing Sharp model..."
             case .processing(_, let phase):
                 return phase

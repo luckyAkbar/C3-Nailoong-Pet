@@ -70,15 +70,11 @@ func inverseSigmoid(_ x: Float) -> Float {
 
 class SHARPModelRunner {
     private let model: MLModel
-    let inputHeight: Int
-    let inputWidth:  Int
+    private let inputHeight: Int
+    private let inputWidth:  Int
 
-    init(modelPath: URL, inputHeight: Int = 1536, inputWidth: Int = 1536, computeUnits: MLComputeUnits = .cpuOnly) throws {
-        let config = MLModelConfiguration()
-        config.computeUnits = computeUnits
-
-        let compiled = try SHARPModelRunner.compileIfNeeded(at: modelPath)
-        self.model       = try MLModel(contentsOf: compiled, configuration: config)
+    private init(model: MLModel, inputHeight: Int = 1536, inputWidth: Int = 1536) {
+        self.model       = model
         self.inputHeight = inputHeight
         self.inputWidth  = inputWidth
 
@@ -86,9 +82,18 @@ class SHARPModelRunner {
         print("Outputs: \(model.modelDescription.outputDescriptionsByName.keys.joined(separator: ", "))")
     }
 
+    static func loadModel(modelPath: URL, inputHeight: Int = 1536, inputWidth: Int = 1536) async throws -> SHARPModelRunner {
+        let config = MLModelConfiguration()
+        config.computeUnits = .cpuOnly
+
+        let compiled = try await compileIfNeeded(at: modelPath)
+        let model = try await MLModel.load(contentsOf: compiled, configuration: config)
+        return SHARPModelRunner(model: model, inputHeight: inputHeight, inputWidth: inputWidth)
+    }
+
     // MARK: Compile
 
-    private static func compileIfNeeded(at modelPath: URL) throws -> URL {
+    private static func compileIfNeeded(at modelPath: URL) async throws -> URL {
         let fm  = FileManager.default
         let ext = modelPath.pathExtension.lowercased()
 
@@ -117,7 +122,9 @@ class SHARPModelRunner {
 
         print("Compiling model…")
         let t   = CFAbsoluteTimeGetCurrent()
-        let tmp = try MLModel.compileModel(at: modelPath)
+        let tmp = try await Task.detached(priority: .userInitiated) {
+            try MLModel.compileModel(at: modelPath)
+        }.value
         print("✓ Compiled in \(String(format: "%.1f", CFAbsoluteTimeGetCurrent() - t))s")
 
         try? fm.removeItem(at: compiledPath)
@@ -129,23 +136,24 @@ class SHARPModelRunner {
 
     /// Accepts a UIImage picked from PhotosPicker or the camera roll.
     func preprocessImage(from uiImage: UIImage) throws -> MLMultiArray {
-        // Create a CIImage from the UIImage in a robust way (handle PNG/HEIF/orientation)
-        let ciImageOpt = uiImage.ciImage ?? CIImage(image: uiImage) ?? (uiImage.cgImage.map { CIImage(cgImage: $0) })
-        guard let ciImage = ciImageOpt else {
+        guard let cgImage = uiImage.cgImage else {
             throw NSError(domain: "SHARP", code: 2,
-                          userInfo: [NSLocalizedDescriptionKey: "Failed to create CIImage from UIImage (unsupported image format)"])
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to get CGImage from UIImage"])
         }
+
+        // Resize via CIImage (same pipeline as the original script)
+        let ciImage  = CIImage(cgImage: cgImage)
         let context  = CIContext()
         let scaleX   = CGFloat(inputWidth)  / ciImage.extent.width
         let scaleY   = CGFloat(inputHeight) / ciImage.extent.height
         let scaled   = ciImage.transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
 
         guard let resized = context.createCGImage(scaled,
-                               from: CGRect(x: 0, y: 0,
-                                    width: inputWidth,
-                                    height: inputHeight)) else {
+                                                   from: CGRect(x: 0, y: 0,
+                                                                width: inputWidth,
+                                                                height: inputHeight)) else {
             throw NSError(domain: "SHARP", code: 3,
-                  userInfo: [NSLocalizedDescriptionKey: "Failed to resize image — possibly due to invalid image data or insufficient memory"])
+                          userInfo: [NSLocalizedDescriptionKey: "Failed to resize image"])
         }
 
         // (1, 3, H, W) float32 array
@@ -200,20 +208,8 @@ class SHARPModelRunner {
             "disparity_factor": MLFeatureValue(multiArray: disparityArray)
         ])
 
-        // Perform prediction and catch failures to provide richer diagnostics
-        let output: MLFeatureProvider
+        let output      = try model.prediction(from: inputFeatures)
         let outputNames = Array(model.modelDescription.outputDescriptionsByName.keys)
-        do {
-            output = try model.prediction(from: inputFeatures)
-        } catch {
-            // Log detailed model metadata to help debugging
-            print("*** SHARPModelRunner: prediction failed: \(error.localizedDescription)")
-            print("Model description: \(model.modelDescription)")
-            print("Model input descriptions: \(model.modelDescription.inputDescriptionsByName.keys)")
-            print("Model output descriptions: \(outputNames)")
-            throw NSError(domain: "SHARP", code: 6,
-                          userInfo: [NSLocalizedDescriptionKey: "ML prediction failed: \(error.localizedDescription). Available outputs: \(outputNames)\nModel description: \(model.modelDescription)"])
-        }
 
         func find(_ keywords: [String]) -> MLMultiArray? {
             for name in outputNames {
@@ -241,7 +237,7 @@ class SHARPModelRunner {
                   let c  = output.featureValue(for: sorted[3])?.multiArrayValue,
                   let o  = output.featureValue(for: sorted[4])?.multiArrayValue else {
                 throw NSError(domain: "SHARP", code: 5,
-                              userInfo: [NSLocalizedDescriptionKey: "Cannot extract outputs. Available: \(outputNames)"])
+                               userInfo: [NSLocalizedDescriptionKey: "Cannot extract outputs. Available: \(outputNames)"])
             }
             print("Using outputs by sorted order: \(sorted)")
             return Gaussians3D(meanVectors: mv, singularValues: sv, quaternions: q, colors: c, opacities: o)
@@ -424,130 +420,119 @@ private func crc32(_ data: Data) -> UInt32 {
 
 // MARK: - ViewModel
 
-enum SharpProcessState: Equatable {
-    case idle
-    case processing(Float, String)
-    case completed(URL)
+enum SHARPState: Equatable {
+    case notStarted
+    case processing(progress: Float, phase: String)
+    case completed(usdzURL: URL)
     case failed(String)
 }
 
 @MainActor
-final class SHARPViewModel: ObservableObject {
+class SHARPViewModel: ObservableObject {
+    @Published var state: SHARPState = .notStarted
     @Published var selectedImage: UIImage? = nil
-    @Published var usdzURL: URL? = nil
-    @Published var state: SharpProcessState = .idle
-    @Published var isProcessing: Bool = false
     @Published var errorMessage: String? = nil
 
     private var runner: SHARPModelRunner?
-    private var modelURL: URL?
-    private var runnerLoadTask: Task<Void, Never>?
+    private var progressTimer: Task<Void, Never>?
 
     init() {
-        runnerLoadTask = Task.detached(priority: .userInitiated) {
+        if let url = Bundle.main.url(forResource: "sharp", withExtension: "mlmodelc") {
+            print("✅ Found model at: \(url.path)")
+        } else {
+            print("❌ sharp.mlpackage NOT found in bundle")
+            // Also print everything in the bundle to help diagnose
+            if let resourcePath = Bundle.main.resourcePath {
+                let files = (try? FileManager.default.contentsOfDirectory(atPath: resourcePath)) ?? []
+                print("Bundle contents:")
+                files.forEach { print("  - \($0)") }
+            }
+        }
+
+        // Load the model once at startup so the first inference is fast
+        Task {
             do {
                 guard let modelURL = Bundle.main.url(forResource: "sharp",
                                                       withExtension: "mlmodelc") else {
-                    await MainActor.run {
-                        self.errorMessage = "sharp.mlpackage not found in bundle."
-                    }
+                    self.errorMessage = "sharp.mlpackage not found in bundle."
                     return
                 }
-                let r = try SHARPModelRunner(modelPath: modelURL, computeUnits: .cpuOnly)
-                await MainActor.run {
-                    self.runner = r
-                    self.modelURL = modelURL
-                }
+                let r = try await SHARPModelRunner.loadModel(modelPath: modelURL)
+                self.runner = r
             } catch {
-                await MainActor.run { self.errorMessage = error.localizedDescription }
+                self.errorMessage = error.localizedDescription
             }
         }
     }
 
-    private func loadRunnerIfNeeded() async throws -> SHARPModelRunner {
-        if let runner {
-            return runner
-        }
-
-        if let task = runnerLoadTask {
-            await task.value
-        }
-
-        if let runner {
-            return runner
-        }
-
-        throw NSError(domain: "SHARP", code: 98,
-                      userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
+    func reset() {
+        progressTimer?.cancel()
+        progressTimer = nil
+        state = .notStarted
+        selectedImage = nil
+        errorMessage = nil
     }
 
-    func process(item: PhotosPickerItem?) async {
-        guard let item else { return }
-
-        do {
-            guard let data = try await item.loadTransferable(type: Data.self),
-                  let uiImage = UIImage(data: data) else {
-                throw NSError(domain: "SHARP", code: 99,
-                              userInfo: [NSLocalizedDescriptionKey: "Could not load image data"])
+    private func startSmoothProgress(from start: Float, to end: Float, duration: Double) {
+        progressTimer?.cancel()
+        progressTimer = Task {
+            let steps = 20
+            let stepDuration = duration / Double(steps)
+            let stepAmount = (end - start) / Float(steps)
+            var currentProgress = start
+            for _ in 0..<steps {
+                if Task.isCancelled { break }
+                try? await Task.sleep(nanoseconds: UInt64(stepDuration * 1_000_000_000))
+                currentProgress += stepAmount
+                if case .processing(_, let phase) = self.state {
+                    self.state = .processing(progress: currentProgress, phase: phase)
+                }
             }
-
-            await process(uiImage: uiImage)
-        } catch {
-            let details = error.localizedDescription
-            let friendly = "Unable to compute the prediction using ML Program. It can be an invalid input data or broken/unsupported model."
-            let message = "\(friendly)\n\nDetails: \(details)"
-            print("SHARP process(item:) failed: \(details)")
-            errorMessage = message
-            state = .failed(message)
         }
     }
 
     func process(uiImage: UIImage) async {
-        selectedImage = uiImage
-        isProcessing = true
+        state = .processing(progress: 0.0, phase: "Preparing image...")
         errorMessage = nil
-        usdzURL = nil
-        state = .processing(0.05, "Preparing image...")
 
         do {
-            let runner = try await loadRunnerIfNeeded()
+            guard let r = runner else {
+                throw NSError(domain: "SHARP", code: 98,
+                              userInfo: [NSLocalizedDescriptionKey: "Model not ready yet — try again"])
+            }
 
-            state = .processing(0.25, "Running Sharp AI...")
-            let imageArray = try runner.preprocessImage(from: uiImage)
-            // Debug: print input array shape and strides for diagnostics
-            let shapeDesc = imageArray.shape.map { "\($0)" }.joined(separator: ",")
-            print("SHARP input MLMultiArray shape: [\(shapeDesc)], dataType: \(imageArray.dataType)")
-            state = .processing(0.55, "Building 3D checkpoints...")
+            // Step 1: Preprocessing
+            state = .processing(progress: 0.0, phase: "Preprocessing image...")
+            startSmoothProgress(from: 0.0, to: 0.2, duration: 0.5)
+            let imageArray = try r.preprocessImage(from: uiImage)
+            progressTimer?.cancel()
 
-            // Predict with the model (requires 1536x1536 input)
-            let gaussians = try runner.predict(image: imageArray, focalLengthPx: Float(runner.inputWidth))
+            // Step 2: CoreML Prediction
+            state = .processing(progress: 0.2, phase: "Running 3D model reconstruction...")
+            startSmoothProgress(from: 0.2, to: 0.7, duration: 3.0)
+            let gaussians = try await Task.detached(priority: .userInitiated) {
+                try r.predict(image: imageArray, focalLengthPx: 1536)
+            }.value
+            progressTimer?.cancel()
 
-            state = .processing(0.75, "Saving 3D model...")
-            let outputFileName = "model-\(UUID().uuidString).usdz"
-            let outURL = ScannedModelLibrary.modelURL(for: outputFileName)
-            try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
+            // Step 3: Generating USDZ
+            state = .processing(progress: 0.7, phase: "Generating 3D model (USDZ)...")
+            startSmoothProgress(from: 0.7, to: 0.95, duration: 2.0)
+            
+            let uniqueID = UUID().uuidString
+            let fileName = "model-\(uniqueID).usdz"
+            let outURL = ScannedModelLibrary.modelURL(for: fileName)
+            
+            try await Task.detached(priority: .userInitiated) {
+                try saveUSDZ(gaussians: gaussians, to: outURL, decimation: 0.5)
+            }.value
+            progressTimer?.cancel()
 
-            usdzURL = outURL
-            state = .processing(0.99, "Finalizing 3D model...")
-            state = .completed(outURL)
+            state = .completed(usdzURL: outURL)
         } catch {
-            let details = error.localizedDescription
-            let friendly = "Unable to compute the prediction using ML Program. It can be an invalid input data or broken/unsupported model."
-            let message = "\(friendly)\n\nDetails: \(details)"
-            print("SHARP process(uiImage:) failed: \(details)")
-            errorMessage = message
-            state = .failed(message)
+            errorMessage = error.localizedDescription
+            state = .failed(error.localizedDescription)
         }
-
-        isProcessing = false
-    }
-
-    func reset() {
-        selectedImage = nil
-        usdzURL = nil
-        state = .idle
-        isProcessing = false
-        errorMessage = nil
     }
 }
 

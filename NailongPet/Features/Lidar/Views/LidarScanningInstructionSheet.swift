@@ -46,11 +46,18 @@ struct LidarScanningInstructionSheet: View {
 
             // MARK: - Text Content
             VStack(alignment: .leading, spacing: 12) {
-                Text("Prepare a Clear Photo of Your Pet")
+                Text("Scan Pet While They’re Stay Still")
                     .font(.title2Bold)
                     .foregroundColor(.textPrimary)
 
-                Text("For the best scan, ensure the room is brightly and evenly lit, then walk 360° slowly around your sleeping pet while keeping them and their items fully inside the frame.")
+                Text("""
+                For the best scan:
+
+                •    Use bright, even lighting.
+                •    Keep your pet and nearby items fully in frame.
+                •    Walk slowly in a full 360° circle around your sleeping pet.
+                •    Avoid sudden movements or changing the camera distance.
+                """)
                     .font(.footnoteRegular)
                     .foregroundColor(Color.textPrimary.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)

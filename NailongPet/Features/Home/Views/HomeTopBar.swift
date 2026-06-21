@@ -11,8 +11,11 @@ struct HomeTopBar: View {
     /// toogle to either show triple dots menu or not
     var showTripleDotsMenu: Bool = true
     var onEdit: () -> Void = {}
+    var selectedPet: Pet3DProfile?
     var onDelete: () -> Void = {}
     var onAdd: () -> Void = {}
+    
+    @State private var showDeleteAlert = false
 
     var body: some View {
         HStack {
@@ -22,11 +25,30 @@ struct HomeTopBar: View {
                         Button(action: onEdit) {
                             Label("Edit", systemImage: AppIcon.edit.rawValue)
                         }
-                        Button(role: .destructive, action: onDelete) {
+                        Button(action: {
+                            showDeleteAlert.toggle()
+                        }) {
                             Label("Delete", systemImage: AppIcon.delete.rawValue)
                         }
                     } label: {
                         CircleIconLabel(icon: .more)
+                    }
+                    .alert(isPresented: $showDeleteAlert) {
+                        let petName = selectedPet?.name ?? "this pet"
+                        return Alert(
+                            title: Text("Are you sure you want to delete \(petName)"),
+                            message: Text("This action is irreversible and you will lose \(petName)'s data forever"),
+                            primaryButton: .default(
+                                Text("Cancel"),
+                                action: {
+                                    showDeleteAlert = false
+                                }
+                            ),
+                            secondaryButton: .destructive(
+                                Text("Delete"),
+                                action: onDelete
+                            )
+                        )
                     }
                 } else {
                     CircleIconLabel(icon: .more)

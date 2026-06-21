@@ -27,7 +27,6 @@ struct Home: View {
             if pets.isEmpty {
                 HomeEmptyState(
                     onCreate: {
-                        print("tombol oncreate di tap")
                         router.showChoose3DSheet = true }
                 )
             } else {

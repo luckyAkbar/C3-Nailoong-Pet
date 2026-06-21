@@ -30,6 +30,7 @@ struct Home: View {
                         router.navigate(to: .petDetail(selected))
                     }
                 },
+                selectedPet: selected,
                 onDelete: {
                     if let selected {
                         petStore.delete(selected, context: modelContext)

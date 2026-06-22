@@ -3,6 +3,7 @@ import RealityKit
 import ARKit
 import Combine
 import Vision
+import AVFoundation
 
 struct ARViewContainer: UIViewRepresentable {
     @ObservedObject var viewModel: ARInteractionViewModel
@@ -63,6 +64,8 @@ struct ARViewContainer: UIViewRepresentable {
         var petEntity: ModelEntity?
         var pivotEntity: Entity?
         weak var arView: ARView?
+        
+        var audioPlayer: AVAudioPlayer?
         
         private var handPoseRequest = VNDetectHumanHandPoseRequest()
         private var isPetting = false
@@ -200,6 +203,18 @@ struct ARViewContainer: UIViewRepresentable {
 
             if originalScale == nil {
                 originalScale = entity.scale
+            }
+            
+            // Play cat meow audio
+            if let soundURL = Bundle.main.url(forResource: "cat_meow", withExtension: "mp3") {
+                do {
+                    audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
+                    audioPlayer?.play()
+                } catch {
+                    print("AR Error playing audio: \(error.localizedDescription)")
+                }
+            } else {
+                print("AR Debug: Audio file 'cat_meow.mp3' not found in bundle.")
             }
             
             guard let baseScale = originalScale else { return }

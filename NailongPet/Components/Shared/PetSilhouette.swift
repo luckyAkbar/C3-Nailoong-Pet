@@ -1,14 +1,16 @@
 import SwiftUI
 
 struct PetSilhouetteView: View {
-    var imageName: String = "CatSilhouette"
+    var imageName: String = "AssetEmptyState"
     var tintColor: Color = .onBrand
 
     var body: some View {
         Image(imageName)
             .resizable()
-            .renderingMode(.template)
-            .foregroundStyle(tintColor)
+            .scaledToFit()
+            .offset(x: -100)
+            .scaleEffect(2.2)
+            .foregroundStyle(Color.brandSecondary)
             .scaledToFit()
             .accessibilityHidden(true)
     }

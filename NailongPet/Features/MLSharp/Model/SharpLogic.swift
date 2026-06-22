@@ -291,8 +291,10 @@ func saveUSDZ(gaussians: Gaussians3D,
 
     let meanPtr  = gaussians.meanVectors.dataPointer.assumingMemoryBound(to: Float.self)
     let colorPtr = gaussians.colors.dataPointer.assumingMemoryBound(to: Float.self)
+    
+    let sizeMultiplier: Float = 15
 
-    let s: Float = 0.006
+    let s: Float = 0.006 * sizeMultiplier
     var points:      [String] = []
     var faceIndices: [String] = []
     var vertColors:  [String] = []
@@ -301,9 +303,9 @@ func saveUSDZ(gaussians: Gaussians3D,
     for i in culledIndices {
         // Apply the aspect-ratio correction on the X axis so that portrait images
         // are not horizontally squished in the reconstructed 3-D scene.
-        let x = meanPtr[i * 3 + 0] * aspectRatio
-        let y = -meanPtr[i * 3 + 1] * 1.0
-        let z = -meanPtr[i * 3 + 2] * 2.0
+        let x = meanPtr[i * 3 + 0] * aspectRatio * sizeMultiplier
+        let y = -meanPtr[i * 3 + 1] * 1.0 * sizeMultiplier
+        let z = -meanPtr[i * 3 + 2] * 2.0 * sizeMultiplier
 
         let r = linearRGBToSRGB(colorPtr[i * 3 + 0])
         let g = linearRGBToSRGB(colorPtr[i * 3 + 1])
@@ -318,7 +320,7 @@ func saveUSDZ(gaussians: Gaussians3D,
             "(\(x-s), \(y-s), \(z))",
         ]
         vertColors += [col, col, col, col]
-        faceIndices += ["\(base), \(base+1), \(base+2)", "\(base), \(base+2), \(base+3)"]
+        faceIndices += ["\(base), \(base+2), \(base+1)", "\(base), \(base+3), \(base+2)"]
         faceCount += 1
     }
 

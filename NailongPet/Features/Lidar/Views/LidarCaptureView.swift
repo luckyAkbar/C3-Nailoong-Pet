@@ -26,7 +26,7 @@ struct LidarCaptureView: View {
             }
         }
         .sheet(isPresented: $isShowingInstructionSheet) {
-            LidarPreservedInstructionSheet()
+            LidarScanningInstructionSheet()
                 .presentationDetents([.fraction(0.85)])
                 .presentationDragIndicator(.visible)
         }
@@ -36,6 +36,9 @@ struct LidarCaptureView: View {
             if manager.session == nil, case .notStarted = manager.state {
                 manager.startSession()
             }
+        }
+        .onDisappear {
+            manager.reset()
         }
     }
 
@@ -54,7 +57,25 @@ struct LidarCaptureView: View {
 
                 CaptureTopBar(onClose: closeView, onTips: { isShowingInstructionSheet = true })
 
-                if let session = manager.session {
+                if let session = manager.session, session.state == .capturing {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            ShotCountPill(count: manager.numberOfShots, minimum: minimumShots)
+                            Spacer()
+                        }
+                        .padding(.top, 80)
+
+                        if let warningFeedback = session.feedback.first(where: { $0 != .movingTooFast && $0 != .outOfFieldOfView }) {
+                            ScanWarningChip(feedback: warningFeedback)
+                                .padding(.top, 8)
+                        }
+
+                        Spacer()
+                        InstructionBubble(message: instructionMessage(for: session))
+                            .padding(.bottom, 16)
+                    }
+                } else if let session = manager.session {
                     VStack {
                         Spacer()
                         InstructionBubble(message: instructionMessage(for: session))
@@ -99,7 +120,6 @@ struct LidarCaptureView: View {
     }
 
     private func closeView() {
-        manager.reset()
         dismiss()
     }
 
@@ -110,14 +130,16 @@ struct LidarCaptureView: View {
         case .initializing:
             return "Preparing camera sensors…"
         case .ready:
-            return "Point your camera at your pet,\nthen tap record to begin"
+            return "Point your camera at your pet,\nthen tap the record button to begin"
         case .detecting:
-            return "Aim at your pet, then tap record"
+            return "Frame your pet, then tap record to start"
         case .capturing:
-            if manager.isPaused { return "Paused. Tap play to continue" }
+            if manager.isPaused { return "Paused — tap play to continue" }
             if let feedback = session.feedback.first { return message(for: feedback) }
-            if manager.numberOfShots < minimumShots { return "Move slowly around your pet" }
-            return "Great! Tap Finish when you're ready"
+            if manager.numberOfShots < minimumShots {
+                return "Walk slowly in a full circle around your pet\n(don't stay still — keep moving!)"
+            }
+            return "Keep circling until you're happy,\nthen tap Finish"
         default:
             return ""
         }
@@ -125,12 +147,12 @@ struct LidarCaptureView: View {
 
     private func message(for feedback: ObjectCaptureSession.Feedback) -> String {
         switch feedback {
-        case .objectTooFar:        return "Move closer to your pet"
-        case .objectTooClose:      return "Move back a little"
-        case .movingTooFast:       return "Slow down your movement"
-        case .environmentTooDark:  return "Too dark — add more light"
-        case .outOfFieldOfView:    return "Keep your pet centered"
-        default:                   return "Move slowly around your pet"
+        case .objectTooFar:        return "Move a little closer to your pet"
+        case .objectTooClose:      return "Step back a bit"
+        case .movingTooFast:       return "Slow down — move gradually"
+        case .environmentTooDark:  return "Too dark — move to a brighter spot"
+        case .outOfFieldOfView:    return "Keep your pet in the center of the frame"
+        default:                   return "Keep walking slowly around your pet"
         }
     }
 }
@@ -270,21 +292,92 @@ private struct CaptureThumbnail: View {
     var image: UIImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.small.value)
-                            .stroke(Color.whitePrimarySurface.opacity(0.4), lineWidth: 1)
-                    )
-            } else {
-                Color.clear.frame(width: 48, height: 48)
+        VStack(spacing: 4) {
+            Group {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small.value))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.small.value)
+                                .stroke(Color.whitePrimarySurface.opacity(0.4), lineWidth: 1)
+                        )
+                } else {
+                    Color.clear.frame(width: 48, height: 48)
+                }
+            }
+            if image != nil {
+                Text("Last shot")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.whitePrimarySurface.opacity(0.6))
             }
         }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct ShotCountPill: View {
+    var count: Int
+    var minimum: Int
+
+    private var hasReachedMinimum: Bool { count >= minimum }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: hasReachedMinimum ? "checkmark.circle.fill" : "camera.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text("\(count) shots")
+                .font(.system(size: 14, weight: .semibold))
+                .monospacedDigit()
+        }
+        .foregroundColor(hasReachedMinimum ? Color.greenSucceedAction : .whitePrimarySurface)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.55).clipShape(Capsule()))
+        .overlay(
+            Capsule().stroke(
+                hasReachedMinimum ? Color.greenSucceedAction.opacity(0.6) : Color.whitePrimarySurface.opacity(0.25),
+                lineWidth: 1
+            )
+        )
+        .animation(.easeOut(duration: 0.2), value: hasReachedMinimum)
+    }
+}
+
+private struct ScanWarningChip: View {
+    var feedback: ObjectCaptureSession.Feedback
+
+    private var label: String {
+        switch feedback {
+        case .objectTooFar:       return "Too far — move closer"
+        case .objectTooClose:     return "Too close — step back"
+        case .environmentTooDark: return "Too dark — find brighter light"
+        default:                  return ""
+        }
+    }
+
+    private var icon: String {
+        switch feedback {
+        case .objectTooFar, .objectTooClose: return "arrow.up.and.down.circle.fill"
+        case .environmentTooDark:            return "sun.max.fill"
+        default:                             return "exclamationmark.circle.fill"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(Color.orangePrimaryBrand)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.black.opacity(0.55).clipShape(Capsule()))
+        .overlay(Capsule().stroke(Color.orangePrimaryBrand.opacity(0.6), lineWidth: 1))
     }
 }
 
@@ -299,35 +392,37 @@ private struct ScanProgressSlider: View {
         return Double(min(captureCount, maxCount)) / Double(maxCount)
     }
 
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.whitePrimarySurface.opacity(0.3))
-                            .frame(height: 6)
-                        Capsule()
-                            .fill(Color.whitePrimarySurface)
-                            .frame(width: geometry.size.width * progress, height: 6)
-                    }
-                }
-                .frame(height: 6)
+    private var hasReachedMinimum: Bool { captureCount >= minCount }
 
-                Text("\(captureCount)")
-                    .font(.title2Bold)
-                    .foregroundColor(.whitePrimarySurface)
-                    .frame(minWidth: 36, alignment: .trailing)
-                    .monospacedDigit()
+    var body: some View {
+        VStack(spacing: 6) {
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.whitePrimarySurface.opacity(0.3))
+                        .frame(height: 6)
+                    Capsule()
+                        .fill(hasReachedMinimum ? Color.greenSucceedAction : Color.whitePrimarySurface)
+                        .frame(width: geometry.size.width * progress, height: 6)
+                        .animation(.easeOut(duration: 0.2), value: progress)
+
+                    let minMarkerX = geometry.size.width * (Double(minCount) / Double(maxCount))
+                    Rectangle()
+                        .fill(Color.whitePrimarySurface)
+                        .frame(width: 2, height: 10)
+                        .offset(x: minMarkerX - 1, y: -2)
+                }
             }
+            .frame(height: 6)
 
             HStack {
-                Text("\(minCount) (min)")
+                Text("Minimum \(minCount) shots")
+                    .foregroundColor(hasReachedMinimum ? Color.greenSucceedAction : .whitePrimarySurface.opacity(0.8))
                 Spacer()
-                Text("\(maxCount) (max)")
+                Text("Maximum \(maxCount) shots")
+                    .foregroundColor(.whitePrimarySurface.opacity(0.5))
             }
-            .font(.footnoteRegular)
-            .foregroundColor(.whitePrimarySurface.opacity(0.8))
+            .font(.system(size: 11, weight: .regular))
         }
     }
 }
